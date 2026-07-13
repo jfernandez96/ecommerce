@@ -1,0 +1,29 @@
+# .NET
+bin/
+obj/
+TestResults/
+*.user
+*.suo
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# IDE / OS
+.vs/
+.vscode/
+Thumbs.db
+.DS_Store
+
+# Docker volumes and generated artifacts
+postgres-data/
+redis-data/
