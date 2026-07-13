@@ -1,0 +1,159 @@
+Ecommerce - Guia de despliegue a Produccion en Ubuntu con dominio y SSL (Let's Encrypt)
+
+Fecha: 2026-07-13
+Alcance: Frontend Next.js + Backend ASP.NET Core + Nginx reverse proxy + HTTPS + Docker Compose.
+
+1) Requisitos previos
+- Servidor Ubuntu 22.04/24.04 con IP publica.
+- Dominio comprado (ejemplo: tudominio.com).
+- Acceso SSH al servidor.
+- Puertos 22, 80 y 443 permitidos en firewall/security group.
+
+2) Preparar servidor
+Ejecutar:
+  sudo apt update && sudo apt upgrade -y
+  sudo apt install -y ca-certificates curl gnupg lsb-release unzip git
+
+Configurar firewall:
+  sudo ufw allow OpenSSH
+  sudo ufw allow 80
+  sudo ufw allow 443
+  sudo ufw enable
+
+3) Instalar Docker y Docker Compose Plugin
+  sudo install -m 0755 -d /etc/apt/keyrings
+  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+  echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+  sudo apt update
+  sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+  sudo usermod -aG docker $USER
+
+Cerrar sesion y volver a entrar para aplicar el grupo docker.
+
+4) DNS del dominio
+En tu proveedor DNS crear registros A:
+- tudominio.com -> IP_PUBLICA_SERVIDOR
+- www.tudominio.com -> IP_PUBLICA_SERVIDOR
+
+Validar:
+  nslookup tudominio.com
+  nslookup www.tudominio.com
+
+5) Obtener codigo y variables de entorno
+Clonar repo en el servidor:
+  git clone <URL_REPO> ecommerce
+  cd ecommerce
+
+Definir variables de produccion (no subir secretos al repo):
+- Backend:
+  ConnectionStrings__SqlServer
+  ConnectionStrings__Redis
+  Jwt__Secret
+  Jwt__Issuer
+  Jwt__Audience
+  Cloudinary__CloudName
+  Cloudinary__ApiKey
+  Cloudinary__ApiSecret
+- Frontend:
+  NEXT_PUBLIC_API_URL=https://tudominio.com/api/v1
+  NEXT_PUBLIC_SITE_URL=https://tudominio.com
+
+6) Base de datos
+- Ejecutar database/init.sql en SQL Server de produccion.
+- Verificar usuario admin seed y cambiar password inmediatamente.
+- Confirmar conectividad desde backend al SQL Server.
+
+7) Levantar servicios con Docker Compose
+Recomendado usar archivo de produccion (ejemplo docker-compose.prod.yml) con restart: always.
+
+Comando:
+  docker compose -f docker-compose.yml up -d --build
+
+Ver estado:
+  docker compose ps
+  docker compose logs -f
+
+8) Instalar y configurar Nginx
+  sudo apt install -y nginx
+
+Crear archivo:
+  sudo nano /etc/nginx/sites-available/ecommerce
+
+Contenido inicial (HTTP):
+
+server {
+    listen 80;
+    server_name tudominio.com www.tudominio.com;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:5036/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+
+Activar sitio:
+  sudo ln -s /etc/nginx/sites-available/ecommerce /etc/nginx/sites-enabled/ecommerce
+  sudo nginx -t
+  sudo systemctl reload nginx
+
+9) SSL con Let's Encrypt (Certbot)
+Instalar Certbot:
+  sudo apt install -y certbot python3-certbot-nginx
+
+Emitir certificados y redireccion HTTP->HTTPS:
+  sudo certbot --nginx -d tudominio.com -d www.tudominio.com --redirect -m tu-correo@dominio.com --agree-tos --no-eff-email
+
+Probar renovacion:
+  sudo certbot renew --dry-run
+
+Ver timer:
+  systemctl status certbot.timer
+
+10) Validaciones post-deploy
+- https://tudominio.com responde.
+- https://tudominio.com/admin/login responde.
+- API por dominio: https://tudominio.com/api/v1/...
+- Login admin, refresh de sesion y logout OK.
+- Revisar logs:
+  docker compose logs -f
+  sudo journalctl -u nginx -f
+
+11) Checklist de hardening minimo
+- Cambiar password de admin seed.
+- Jwt__Secret largo (al menos 64 chars), unico por entorno.
+- Restringir CORS a dominio real.
+- Deshabilitar/limitar Swagger en produccion.
+- Backups automaticos de base de datos y prueba de restore.
+- Fail2ban (opcional) y monitoreo de errores 5xx.
+
+12) Comandos de operacion
+Actualizar version:
+  git pull
+  docker compose up -d --build
+
+Reiniciar stack:
+  docker compose restart
+
+Detener stack:
+  docker compose down
+
+13) Troubleshooting rapido
+- Certbot falla por challenge: revisar DNS y puerto 80 abierto.
+- 502 Bad Gateway: verificar puertos internos de frontend/backend y contenedores arriba.
+- Login admin falla: validar ConnectionStrings, init.sql aplicado y usuario activo.
+- Cookies de auth: confirmar que el acceso final es por HTTPS y mismo dominio.
+
+Fin del documento.

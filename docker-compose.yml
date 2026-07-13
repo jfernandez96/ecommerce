@@ -1,0 +1,56 @@
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Your_password123"
+      MSSQL_PID: "Developer"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P Your_password123 -C -Q \"SELECT 1\" || /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P Your_password123 -Q \"SELECT 1\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  sqlserver-init:
+    image: mcr.microsoft.com/mssql-tools
+    volumes:
+      - ./database/init.sql:/init.sql:ro
+    entrypoint: /bin/bash -c "sleep 20 && /opt/mssql-tools/bin/sqlcmd -S sqlserver -U sa -P Your_password123 -i /init.sql"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
+  api:
+    build:
+      context: .
+      dockerfile: src/backend/Ecommerce.Api/Dockerfile
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__SqlServer: Server=sqlserver,1433;Database=ecommerce;User Id=sa;Password=Your_password123;TrustServerCertificate=True;Encrypt=True
+      ConnectionStrings__Redis: redis:6379
+      Jwt__Secret: CHANGE_ME_TO_A_64_CHARACTER_PRODUCTION_SECRET_VALUE_1234567890
+      Jwt__Issuer: ecommerce-api
+      Jwt__Audience: ecommerce-web
+    ports:
+      - "5184:8080"
+    depends_on:
+      sqlserver-init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+
+volumes:
+  sqlserver-data:
+  redis-data:
