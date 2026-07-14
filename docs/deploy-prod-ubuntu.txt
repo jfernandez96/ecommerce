@@ -1,18 +1,24 @@
-Ecommerce - Guia de despliegue a Produccion en Ubuntu con dominio y SSL (Let's Encrypt)
+Ecommerce - Guia de despliegue del Frontend en Ubuntu sin Docker (Contabo)
 
 Fecha: 2026-07-13
-Alcance: Frontend Next.js + Backend ASP.NET Core + Nginx reverse proxy + HTTPS + Docker Compose.
+Alcance: Solo Frontend Next.js en VPS Ubuntu + Nginx + HTTPS (Let's Encrypt) + API en VPS Windows separado.
+
+Arquitectura objetivo
+- VPS Windows: backend API ASP.NET Core (ya operativo).
+- VPS Ubuntu (Contabo): frontend Next.js 15 sin Docker.
+- Dominio frontend ejemplo: tienda.midominio.com.
+- Dominio API ejemplo: api.midominio.com.
 
 1) Requisitos previos
-- Servidor Ubuntu 22.04/24.04 con IP publica.
-- Dominio comprado (ejemplo: tudominio.com).
-- Acceso SSH al servidor.
-- Puertos 22, 80 y 443 permitidos en firewall/security group.
+- Ubuntu 22.04/24.04 con IP publica.
+- Dominio/subdominio apuntando al VPS Ubuntu.
+- API del backend accesible por HTTPS desde internet.
+- Puertos 22, 80 y 443 abiertos en firewall/security group.
 
-2) Preparar servidor
+2) Preparar servidor Ubuntu
 Ejecutar:
   sudo apt update && sudo apt upgrade -y
-  sudo apt install -y ca-certificates curl gnupg lsb-release unzip git
+  sudo apt install -y ca-certificates curl gnupg unzip git nginx
 
 Configurar firewall:
   sudo ufw allow OpenSSH
@@ -20,70 +26,101 @@ Configurar firewall:
   sudo ufw allow 443
   sudo ufw enable
 
-3) Instalar Docker y Docker Compose Plugin
-  sudo install -m 0755 -d /etc/apt/keyrings
-  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-  echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-  sudo apt update
-  sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-  sudo usermod -aG docker $USER
+3) Instalar Node.js LTS (sin Docker)
+Recomendado Node 20 LTS para Next.js 15.
 
-Cerrar sesion y volver a entrar para aplicar el grupo docker.
+  curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+  sudo apt install -y nodejs
+  node -v
+  npm -v
 
-4) DNS del dominio
-En tu proveedor DNS crear registros A:
-- tudominio.com -> IP_PUBLICA_SERVIDOR
-- www.tudominio.com -> IP_PUBLICA_SERVIDOR
+4) DNS del frontend
+En tu proveedor DNS crea registros A:
+- tienda.midominio.com -> IP_PUBLICA_VPS_UBUNTU
+
+Si usaras raiz y www:
+- midominio.com -> IP_PUBLICA_VPS_UBUNTU
+- www.midominio.com -> IP_PUBLICA_VPS_UBUNTU
 
 Validar:
-  nslookup tudominio.com
-  nslookup www.tudominio.com
+  nslookup tienda.midominio.com
 
-5) Obtener codigo y variables de entorno
-Clonar repo en el servidor:
-  git clone <URL_REPO> ecommerce
-  cd ecommerce
+5) Publicar codigo en el VPS Ubuntu
+Ejemplo en /var/www:
+  sudo mkdir -p /var/www
+  cd /var/www
+  sudo git clone https://github.com/jfernandez96/ecommerce.git ecommerce
+  sudo chown -R $USER:$USER /var/www/ecommerce
+  cd /var/www/ecommerce/src/frontend
 
-Definir variables de produccion (no subir secretos al repo):
-- Backend:
-  ConnectionStrings__SqlServer
-  ConnectionStrings__Redis
-  Jwt__Secret
-  Jwt__Issuer
-  Jwt__Audience
-  Cloudinary__CloudName
-  Cloudinary__ApiKey
-  Cloudinary__ApiSecret
-- Frontend:
-  NEXT_PUBLIC_API_URL=https://tudominio.com/api/v1
-  NEXT_PUBLIC_SITE_URL=https://tudominio.com
+6) Variables de entorno de produccion del frontend
+Crear archivo .env.production en src/frontend:
 
-6) Base de datos
-- Ejecutar database/init.sql en SQL Server de produccion.
-- Verificar usuario admin seed y cambiar password inmediatamente.
-- Confirmar conectividad desde backend al SQL Server.
+  NEXT_PUBLIC_API_URL=https://api.midominio.com/api/v1
+  NEXT_PUBLIC_SITE_URL=https://tienda.midominio.com
+  NODE_ENV=production
 
-7) Levantar servicios con Docker Compose
-Recomendado usar archivo de produccion (ejemplo docker-compose.prod.yml) con restart: always.
+Notas importantes:
+- NEXT_PUBLIC_API_URL debe apuntar al backend Windows real (no localhost).
+- Si tu API usa cookies/sesion, valida CORS y cookies secure/samesite en backend.
 
-Comando:
-  docker compose -f docker-compose.yml up -d --build
+7) Build y arranque local del frontend (puerto interno 3000)
+Desde /var/www/ecommerce/src/frontend:
+cd /var/www/ecommerce/src/frontend
 
-Ver estado:
-  docker compose ps
-  docker compose logs -f
+  npm ci
+  npm run build
+  npm run start -- -p 3000
 
-8) Instalar y configurar Nginx
-  sudo apt install -y nginx
+Probar desde el servidor:
+  curl http://127.0.0.1:3000
 
+8) Ejecutar como servicio con systemd (recomendado)
+Crear servicio:
+  sudo nano /etc/systemd/system/ecommerce-frontend.service
+
+Contenido:
+
+[Unit]
+Description=Ecommerce Frontend Next.js
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/ecommerce/src/frontend
+Environment=NODE_ENV=production
+EnvironmentFile=/var/www/ecommerce/src/frontend/.env.production
+ExecStart=/usr/bin/npm run start -- -p 3000
+Restart=always
+RestartSec=5
+KillSignal=SIGINT
+SyslogIdentifier=ecommerce-frontend
+
+[Install]
+WantedBy=multi-user.target
+
+Ajustar permisos para que www-data pueda leer el proyecto:
+  sudo chown -R www-data:www-data /var/www/ecommerce
+
+Habilitar e iniciar:
+  sudo systemctl daemon-reload
+  sudo systemctl enable ecommerce-frontend
+  sudo systemctl start ecommerce-frontend
+  sudo systemctl status ecommerce-frontend
+
+Logs del servicio:
+  sudo journalctl -u ecommerce-frontend -f
+9) Configurar Nginx reverse proxy
 Crear archivo:
-  sudo nano /etc/nginx/sites-available/ecommerce
+  sudo nano /etc/nginx/sites-available/ecommerce-frontend
 
-Contenido inicial (HTTP):
+Contenido HTTP inicial:
 
 server {
     listen 80;
-    server_name tudominio.com www.tudominio.com;
+    server_name tienda.midominio.com;
 
     location / {
         proxy_pass http://127.0.0.1:3000;
@@ -92,29 +129,22 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Real-IP $remote_addr;
-    }
-
-    location /api/ {
-        proxy_pass http://127.0.0.1:5036/api/;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
     }
 }
 
 Activar sitio:
-  sudo ln -s /etc/nginx/sites-available/ecommerce /etc/nginx/sites-enabled/ecommerce
+  sudo ln -s /etc/nginx/sites-available/ecommerce-frontend /etc/nginx/sites-enabled/ecommerce-frontend
   sudo nginx -t
   sudo systemctl reload nginx
 
-9) SSL con Let's Encrypt (Certbot)
+10) SSL con Let's Encrypt (Certbot)
 Instalar Certbot:
   sudo apt install -y certbot python3-certbot-nginx
 
-Emitir certificados y redireccion HTTP->HTTPS:
-  sudo certbot --nginx -d tudominio.com -d www.tudominio.com --redirect -m tu-correo@dominio.com --agree-tos --no-eff-email
+Emitir certificado y forzar redireccion HTTPS:
+  sudo certbot --nginx -d tiendaonline.softcoretechnology.com.pe --redirect -m jfernandez@softcoretechnology.com.pe --agree-tos --no-eff-email
 
 Probar renovacion:
   sudo certbot renew --dry-run
@@ -122,38 +152,46 @@ Probar renovacion:
 Ver timer:
   systemctl status certbot.timer
 
-10) Validaciones post-deploy
-- https://tudominio.com responde.
-- https://tudominio.com/admin/login responde.
-- API por dominio: https://tudominio.com/api/v1/...
-- Login admin, refresh de sesion y logout OK.
+11) Validaciones post-deploy
+- https://tienda.midominio.com responde.
+- https://tienda.midominio.com/admin/login responde.
+- El frontend consume datos desde https://api.midominio.com/api/v1.
+- No hay errores CORS en navegador.
 - Revisar logs:
-  docker compose logs -f
+  sudo journalctl -u ecommerce-frontend -f
   sudo journalctl -u nginx -f
 
-11) Checklist de hardening minimo
-- Cambiar password de admin seed.
-- Jwt__Secret largo (al menos 64 chars), unico por entorno.
-- Restringir CORS a dominio real.
-- Deshabilitar/limitar Swagger en produccion.
-- Backups automaticos de base de datos y prueba de restore.
-- Fail2ban (opcional) y monitoreo de errores 5xx.
+12) Flujo de actualizacion (sin Docker)
+Desde /var/www/ecommerce:
 
-12) Comandos de operacion
-Actualizar version:
   git pull
-  docker compose up -d --build
-
-Reiniciar stack:
-  docker compose restart
-
-Detener stack:
-  docker compose down
+  cd src/frontend
+  npm ci
+  npm run build
+  sudo systemctl restart ecommerce-frontend
+  sudo systemctl status ecommerce-frontend
 
 13) Troubleshooting rapido
-- Certbot falla por challenge: revisar DNS y puerto 80 abierto.
-- 502 Bad Gateway: verificar puertos internos de frontend/backend y contenedores arriba.
-- Login admin falla: validar ConnectionStrings, init.sql aplicado y usuario activo.
-- Cookies de auth: confirmar que el acceso final es por HTTPS y mismo dominio.
+- Error 502 Bad Gateway:
+  Verifica que el servicio ecommerce-frontend este arriba y escuchando en 3000.
+  Comandos:
+    sudo systemctl status ecommerce-frontend
+    sudo journalctl -u ecommerce-frontend -n 100
+
+- Error de CORS en frontend:
+  Ajusta CORS en backend Windows para permitir https://tienda.midominio.com.
+
+- Variables NEXT_PUBLIC no reflejan cambios:
+  Recuerda que NEXT_PUBLIC se inyecta en build. Ejecuta npm run build de nuevo y reinicia servicio.
+
+- SSL no emite:
+  Verifica DNS apuntando al VPS Ubuntu y puerto 80 abierto.
+
+14) Checklist minimo de seguridad
+- Backend con Jwt__Secret robusto y rotacion controlada.
+- Swagger restringido o deshabilitado en produccion.
+- Password admin seed cambiado.
+- Backups de SQL Server validados.
+- Monitoreo de errores 5xx en frontend y backend.
 
 Fin del documento.

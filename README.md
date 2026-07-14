@@ -66,16 +66,30 @@ Ejecuta `database/init.sql` en SQL Server si tu base local aun no tiene el usuar
 
 ## Variables de producción
 
-- `ConnectionStrings__SqlServer`
-- `ConnectionStrings__Redis`
-- `Jwt__Secret`
-- `Jwt__Issuer`
-- `Jwt__Audience`
-- `Cloudinary__CloudName`
-- `Cloudinary__ApiKey`
-- `Cloudinary__ApiSecret`
-- `NEXT_PUBLIC_API_URL`
-- `NEXT_PUBLIC_SITE_URL`
+Backend (ASP.NET Core en VPS Windows):
+
+- ConnectionStrings__SqlServer
+- ConnectionStrings__Redis
+- Jwt__Secret
+- Jwt__Issuer
+- Jwt__Audience
+- Cloudinary__CloudName
+- Cloudinary__ApiKey
+- Cloudinary__ApiSecret
+
+Frontend (Next.js en VPS Ubuntu):
+
+- NEXT_PUBLIC_API_URL
+- NEXT_PUBLIC_SITE_URL
+
+Donde ponerlas en produccion:
+
+- Backend Windows: como variables de entorno del sistema, del IIS App Pool o del servicio que ejecuta la API.
+- Frontend Ubuntu (sin Docker): en src/frontend/.env.production y luego volver a compilar (npm run build) y reiniciar el servicio.
+
+Nota:
+
+- Nunca pongas secretos (SqlServer, Jwt, Cloudinary secret) en el frontend.
 
 ## Deployment
 
