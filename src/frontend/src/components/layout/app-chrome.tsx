@@ -50,14 +50,16 @@ export function AppChrome({ children }: Readonly<{ children: React.ReactNode }>)
   });
 
   const pendingOrders = useMemo(() => {
-    const orders = pendingOrdersQuery.data?.page.items ?? [];
+    const rawItems = pendingOrdersQuery.data?.page?.items;
+    const orders = Array.isArray(rawItems) ? rawItems : [];
     return orders
       .filter((order) => order.paymentStatus === "pending" || order.paymentStatus === "pending_contact")
       .slice(0, 5);
   }, [pendingOrdersQuery.data]);
 
   const pendingOrdersCount = useMemo(() => {
-    const orders = pendingOrdersQuery.data?.page.items ?? [];
+    const rawItems = pendingOrdersQuery.data?.page?.items;
+    const orders = Array.isArray(rawItems) ? rawItems : [];
     return orders.filter((order) => order.paymentStatus === "pending" || order.paymentStatus === "pending_contact").length;
   }, [pendingOrdersQuery.data]);
 

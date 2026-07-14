@@ -501,7 +501,22 @@ export async function setBrandStatus(id: string, isActive: boolean) {
 
 export async function listPromotions() {
   const { data } = await api.get("/promotions");
-  return data as PromotionDto[];
+
+  if (Array.isArray(data)) {
+    return data as PromotionDto[];
+  }
+
+  if (data && typeof data === "object") {
+    if ("items" in data && Array.isArray((data as { items?: unknown }).items)) {
+      return (data as { items: PromotionDto[] }).items;
+    }
+
+    if ("data" in data && Array.isArray((data as { data?: unknown }).data)) {
+      return (data as { data: PromotionDto[] }).data;
+    }
+  }
+
+  return [];
 }
 
 export async function createPromotion(payload: Omit<PromotionDto, "id">) {
@@ -528,7 +543,22 @@ export async function setPromotionStatus(id: string, isActive: boolean) {
 
 export async function listBanners() {
   const { data } = await api.get("/banners/admin");
-  return data as BannerDto[];
+
+  if (Array.isArray(data)) {
+    return data as BannerDto[];
+  }
+
+  if (data && typeof data === "object") {
+    if ("items" in data && Array.isArray((data as { items?: unknown }).items)) {
+      return (data as { items: BannerDto[] }).items;
+    }
+
+    if ("data" in data && Array.isArray((data as { data?: unknown }).data)) {
+      return (data as { data: BannerDto[] }).data;
+    }
+  }
+
+  return [];
 }
 
 export async function createBanner(payload: Omit<BannerDto, "id" | "createdAt">) {

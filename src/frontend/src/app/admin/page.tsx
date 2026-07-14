@@ -113,8 +113,10 @@ export default function AdminPage() {
   const recentOrders = ordersQuery.data?.page.items ?? [];
   const lowStockItems = lowStockQuery.data ?? [];
   const totalProducts = productsQuery.data?.totalItems ?? 0;
-  const activePromotions = (promotionsQuery.data ?? []).filter((promotion) => promotion.isActive).length;
-  const activeBanners = (bannersQuery.data ?? []).filter((banner) => banner.isActive).length;
+  const promotions = Array.isArray(promotionsQuery.data) ? promotionsQuery.data : [];
+  const banners = Array.isArray(bannersQuery.data) ? bannersQuery.data : [];
+  const activePromotions = promotions.filter((promotion) => promotion.isActive).length;
+  const activeBanners = banners.filter((banner) => banner.isActive).length;
 
   const maxDailySales = Math.max(...salesDaily.map((point) => point.grossSales), 1);
 

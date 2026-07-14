@@ -1,7 +1,14 @@
 import axios from "axios";
 
+const isBrowser = typeof window !== "undefined";
+const browserBffBaseUrl = "/api/bff";
+const upstreamApiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5036/api/v1";
+const useBff = process.env.NEXT_PUBLIC_USE_BFF
+  ? process.env.NEXT_PUBLIC_USE_BFF === "true"
+  : process.env.NODE_ENV === "production";
+
 export const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5036/api/v1",
+  baseURL: isBrowser ? (useBff ? browserBffBaseUrl : upstreamApiBaseUrl) : upstreamApiBaseUrl,
   timeout: 60000,
   withCredentials: true
 });
@@ -50,10 +57,18 @@ function isAuthRequest(url?: string) {
   return Boolean(url && /\/auth\/(login|refresh|logout)$/i.test(url));
 }
 
+function redirectToAdminLogin(reason: "expired" | "forbidden") {
+  const currentPath = window.location.pathname + window.location.search;
+  const params = new URLSearchParams();
+  params.set("next", currentPath);
+  params.set("reason", reason);
+  window.location.href = `/admin/login?${params.toString()}`;
+}
+
 async function refreshAdminSession() {
   if (!refreshPromise) {
-    refreshPromise = axios
-      .post(`${api.defaults.baseURL}/auth/refresh`, undefined, { withCredentials: true })
+    refreshPromise = api
+      .post("/auth/refresh")
       .then(() => undefined)
       .finally(() => {
         refreshPromise = null;
@@ -65,7 +80,7 @@ async function refreshAdminSession() {
 
 async function logoutSilently() {
   try {
-    await axios.post(`${api.defaults.baseURL}/auth/logout`, undefined, { withCredentials: true });
+    await api.post("/auth/logout");
   } catch {
     clearAdminSession();
   }
@@ -76,7 +91,6 @@ api.interceptors.response.use(
   async (error) => {
     if (typeof window !== "undefined" && error?.response?.status === 401) {
       const requestConfig = error.config as (typeof error.config & { _retry?: boolean }) | undefined;
-      const currentPath = window.location.pathname + window.location.search;
       const isAdminPath = window.location.pathname.startsWith("/admin");
 
       if (isAdminPath && requestConfig && !requestConfig._retry && !isAuthRequest(requestConfig.url)) {
@@ -92,9 +106,17 @@ api.interceptors.response.use(
 
       clearAdminSession();
       if (isAdminPath && !window.location.pathname.startsWith("/admin/login")) {
-        window.location.href = `/admin/login?next=${encodeURIComponent(currentPath)}`;
+        redirectToAdminLogin("expired");
       }
-      return Promise.reject(new Error("Sesion expirada o no autorizada. Ingresa nuevamente como administrador."));
+      return Promise.reject(new Error("Tu sesion expiro. Ingresa nuevamente para continuar."));
+    }
+
+    if (typeof window !== "undefined" && error?.response?.status === 403) {
+      const isAdminPath = window.location.pathname.startsWith("/admin");
+      if (isAdminPath && !window.location.pathname.startsWith("/admin/login")) {
+        redirectToAdminLogin("forbidden");
+      }
+      return Promise.reject(new Error("No tienes permisos para realizar esta accion."));
     }
 
     const message = getApiErrorMessage(error);
@@ -272,7 +294,22 @@ export async function getProducts(pageSize = 12) {
 export async function getPromotions() {
   try {
     const { data } = await api.get("/promotions");
-    return data as PublicPromotion[];
+
+    if (Array.isArray(data)) {
+      return data as PublicPromotion[];
+    }
+
+    if (data && typeof data === "object") {
+      if ("items" in data && Array.isArray((data as { items?: unknown }).items)) {
+        return (data as { items: PublicPromotion[] }).items;
+      }
+
+      if ("data" in data && Array.isArray((data as { data?: unknown }).data)) {
+        return (data as { data: PublicPromotion[] }).data;
+      }
+    }
+
+    return [];
   } catch {
     return [];
   }
