@@ -114,8 +114,8 @@ public sealed class AuthController(ISender sender, IJwtTokenService jwtTokenServ
     private CookieOptions BuildCookieOptions(DateTimeOffset expiresAt) => new()
     {
         HttpOnly = true,
-        Secure = Request.IsHttps,
-        SameSite = SameSiteMode.Lax,
+        Secure = true,
+        SameSite = SameSiteMode.None,
         Path = "/",
         Expires = expiresAt,
         IsEssential = true,

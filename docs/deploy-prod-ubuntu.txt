@@ -163,7 +163,7 @@ Ver timer:
 
 12) Flujo de actualizacion (sin Docker)
 Desde /var/www/ecommerce:
-
+  cd /var/www/ecommerce
   git pull
   cd src/frontend
   npm ci
