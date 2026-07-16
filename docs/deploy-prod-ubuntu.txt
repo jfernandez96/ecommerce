@@ -139,6 +139,11 @@ Nota importante para uploads de banners/promociones/productos:
 - Si Nginx no tiene client_max_body_size, devolvera 413 Request Entity Too Large (default ~1MB).
 - Mantener el mismo valor en el server HTTPS generado por Certbot (archivo en /etc/nginx/sites-available/ecommerce-frontend).
 
+Validar y recargar:
+sudo nginx -t
+sudo systemctl reload nginx
+sudo systemctl restart ecommerce-frontend
+
 Activar sitio:
   sudo ln -s /etc/nginx/sites-available/ecommerce-frontend /etc/nginx/sites-enabled/ecommerce-frontend
   sudo nginx -t
