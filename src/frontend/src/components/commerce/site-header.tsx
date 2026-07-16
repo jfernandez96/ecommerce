@@ -100,6 +100,19 @@ export function SiteHeader() {
     ...navItems
   ], [navItems]);
 
+  const shortcutLinks = useMemo(() => {
+    const base = navigationItems
+      .filter((item) => item.id !== "home")
+      .slice(0, 6)
+      .map((item) => ({ id: item.id, label: item.label, href: item.href, isHot: item.isHot }));
+
+    if (!base.some((item) => item.href === "/collections")) {
+      base.unshift({ id: "collections", label: "Todo", href: "/collections", isHot: false });
+    }
+
+    return base;
+  }, [navigationItems]);
+
   const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const trimmed = searchTerm.trim();
@@ -110,7 +123,7 @@ export function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-[hsl(var(--customer-surface)/0.92)] backdrop-blur-xl">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-4 py-4">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-4 py-3">
         <div className="flex items-center gap-2 lg:hidden">
           <Button
             variant="ghost"
@@ -182,19 +195,6 @@ export function SiteHeader() {
           })}
         </nav>
         <div className="flex items-center gap-2">
-          <form onSubmit={handleSearchSubmit} className="hidden items-center gap-2 lg:flex">
-            <label htmlFor="desktop-search" className="sr-only">Buscar productos</label>
-            <input
-              id="desktop-search"
-              className="h-10 w-52 rounded-md border border-border bg-background px-3 text-sm"
-              placeholder="Buscar productos"
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-            />
-            <Button type="submit" variant="ghost" aria-label="Buscar">
-              <Search size={19} />
-            </Button>
-          </form>
           <Link href="/wishlist" className="relative inline-flex h-11 w-11 items-center justify-center rounded-md hover:bg-muted transition" aria-label="Favoritos">
             <Heart size={20} className="fill-[hsl(var(--customer-cta))] text-[hsl(var(--customer-cta))]" />
             {wishlistCount > 0 && <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-[hsl(var(--customer-cta))] px-1 text-xs font-bold text-white">{wishlistCount}</span>}
@@ -206,22 +206,38 @@ export function SiteHeader() {
         </div>
       </div>
 
-      {isMobileMenuOpen && (
-        <div className="border-t border-border bg-[hsl(var(--customer-surface))] px-4 pb-5 pt-3 lg:hidden">
-          <form onSubmit={handleSearchSubmit} className="mb-4 flex items-center gap-2">
-            <label htmlFor="mobile-search" className="sr-only">Buscar productos</label>
+      <div className="border-t border-border/70 bg-[hsl(var(--customer-surface)/0.95)]">
+        <div className="mx-auto max-w-7xl px-4 py-2.5">
+          <form onSubmit={handleSearchSubmit} className="flex items-center gap-2">
+            <label htmlFor="global-search" className="sr-only">Buscar productos</label>
             <input
-              id="mobile-search"
-              className="h-11 min-w-0 flex-1 rounded-md border border-border bg-background px-3 text-sm"
-              placeholder="Buscar productos"
+              id="global-search"
+              className="h-11 min-w-0 flex-1 rounded-full border border-border bg-background px-4 text-sm"
+              placeholder="Buscar por nombre, marca, categoria o SKU"
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
             />
-            <Button type="submit" variant="ghost" aria-label="Buscar">
-              <Search size={19} />
+            <Button type="submit" className="h-11 rounded-full px-4" aria-label="Buscar productos">
+              <Search size={18} />
             </Button>
           </form>
 
+          <div className="mt-2 flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+            {shortcutLinks.map((item) => (
+              <Link
+                key={item.id}
+                href={item.href}
+                className={`whitespace-nowrap rounded-full border px-3 py-1 text-xs font-semibold transition ${item.isHot ? "border-[hsl(var(--customer-cta)/0.4)] bg-[hsl(var(--customer-cta)/0.10)] text-[hsl(var(--customer-cta))]" : "border-border text-foreground/75 hover:bg-muted"}`}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {isMobileMenuOpen && (
+        <div className="border-t border-border bg-[hsl(var(--customer-surface))] px-4 pb-5 pt-3 lg:hidden">
           <nav className="space-y-3">
             {navigationItems.map((item) => (
               <div key={item.id} className="rounded-md border border-border bg-[hsl(var(--customer-surface))] p-3">
