@@ -68,6 +68,12 @@ export default function CheckoutPage() {
     });
   }, []);
 
+  useEffect(() => {
+    if (fulfillmentType === "pickup" && !selectedStoreId && stores.length > 0) {
+      setSelectedStoreId(stores[0].id);
+    }
+  }, [fulfillmentType, selectedStoreId, stores]);
+
   // ── Cascade: dept → provinces ─────────────────────────────────────────────
   useEffect(() => {
     setSelectedProvinceId("");
@@ -118,7 +124,7 @@ export default function CheckoutPage() {
     setError(null);
 
     if (items.length === 0) { setError("Tu carrito esta vacio."); return; }
-    if (!selectedStoreId) {
+    if (fulfillmentType === "pickup" && !selectedStoreId) {
       setError("Selecciona una tienda para continuar.");
       return;
     }
@@ -132,6 +138,15 @@ export default function CheckoutPage() {
 
     // When gateway is off, default payment method to "card" but backend handles by sending email only
     const effectivePaymentMethod = settings.paymentGatewayEnabled ? paymentMethod : "card";
+    const effectiveStoreId = fulfillmentType === "pickup"
+      ? selectedStoreId
+      : (selectedStoreId || stores[0]?.id || "");
+
+    if (!effectiveStoreId) {
+      setError("No hay tiendas configuradas para procesar el pedido.");
+      setIsSubmitting(false);
+      return;
+    }
 
     try {
       const response = await createOrder({
@@ -156,7 +171,7 @@ export default function CheckoutPage() {
         documentNumber: String(formData.get("documentNumber") ?? ""),
         paymentMethod: effectivePaymentMethod,
         fulfillmentType,
-        storeId: selectedStoreId,
+        storeId: effectiveStoreId,
         notes: String(formData.get("notes") ?? "") || undefined,
         items: items.map((item) => ({
           productId: item.id,
@@ -241,29 +256,31 @@ export default function CheckoutPage() {
                 </button>
               </div>
 
-              <div className="mt-4">
-                <label className="text-sm font-semibold">Tienda</label>
-                <select
-                  value={selectedStoreId}
-                  onChange={(event) => setSelectedStoreId(event.target.value)}
-                  className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3"
-                  required
-                >
-                  <option value="">Selecciona tienda</option>
-                  {stores.map((store) => (
-                    <option key={store.id} value={store.id}>
-                      {store.name} · {store.code}
-                    </option>
-                  ))}
-                </select>
-                {selectedStore && (
-                  <p className="mt-2 text-xs text-foreground/60">
-                    {selectedStore.address}
-                    {selectedStore.district ? `, ${selectedStore.district}` : ""}
-                    {selectedStore.province ? `, ${selectedStore.province}` : ""}
-                  </p>
-                )}
-              </div>
+              {fulfillmentType === "pickup" && (
+                <div className="mt-4">
+                  <label className="text-sm font-semibold">Tienda</label>
+                  <select
+                    value={selectedStoreId}
+                    onChange={(event) => setSelectedStoreId(event.target.value)}
+                    className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3"
+                    required
+                  >
+                    <option value="">Selecciona tienda</option>
+                    {stores.map((store) => (
+                      <option key={store.id} value={store.id}>
+                        {store.name} · {store.code}
+                      </option>
+                    ))}
+                  </select>
+                  {selectedStore && (
+                    <p className="mt-2 text-xs text-foreground/60">
+                      {selectedStore.address}
+                      {selectedStore.district ? `, ${selectedStore.district}` : ""}
+                      {selectedStore.province ? `, ${selectedStore.province}` : ""}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* ── Datos de entrega ───────────────────────────────────────── */}
