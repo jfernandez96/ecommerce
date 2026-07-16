@@ -73,11 +73,19 @@ async function proxy(request: NextRequest, context: RouteContext) {
   const hasBody = method !== "GET" && method !== "HEAD";
 
   try {
-    const response = await fetch(upstreamUrl, {
+    const requestInit: RequestInit & { duplex?: "half" } = {
       method,
       headers: copyRequestHeaders(request),
-      body: hasBody ? await request.arrayBuffer() : undefined,
       redirect: "manual"
+    };
+
+    if (hasBody) {
+      requestInit.body = request.body;
+      requestInit.duplex = "half";
+    }
+
+    const response = await fetch(upstreamUrl, {
+      ...requestInit
     });
 
     return new Response(response.body, {

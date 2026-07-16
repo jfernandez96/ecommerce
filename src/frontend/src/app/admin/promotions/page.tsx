@@ -10,7 +10,7 @@ import { AdminShell } from "@/components/admin/admin-shell";
 import { ProductImage } from "@/components/commerce/product-image";
 import { Button } from "@/components/ui/button";
 import { useAppToast } from "@/components/ui/toast";
-import { createPromotion, deletePromotion, duplicatePromotion, listBrands, listCategories, listProducts, listPromotions, setPromotionStatus, updatePromotion, type PromotionDto } from "@/lib/admin-api";
+import { createPromotion, deletePromotion, duplicatePromotion, listBrands, listCategories, listProducts, listPromotions, setPromotionStatus, updatePromotion, uploadAdminImage, type PromotionDto } from "@/lib/admin-api";
 
 const schema = z.object({
   name: z.string().min(3, "Nombre requerido"),
@@ -29,15 +29,6 @@ type FormValues = z.infer<typeof schema>;
 type FormInput = z.input<typeof schema>;
 const promotionTypeValue = (type: string) => ({ Percentage: 0, FixedAmount: 1, TwoForOne: 2, ThreeForTwo: 3 }[type] ?? Number(type));
 const MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024;
-
-function fileToDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
-}
 
 export default function AdminPromotionsPage() {
   const queryClient = useQueryClient();
@@ -82,7 +73,12 @@ export default function AdminPromotionsPage() {
     }
 
     setApiError("");
-    form.setValue("bannerUrl", await fileToDataUrl(file), { shouldValidate: true });
+    try {
+      const uploadedUrl = await uploadAdminImage(file, "promotions");
+      form.setValue("bannerUrl", uploadedUrl, { shouldValidate: true });
+    } catch (error) {
+      setApiError(error instanceof Error ? error.message : "No se pudo subir la imagen.");
+    }
   };
 
   const togglePromotionStatus = async (promotion: PromotionDto) => {

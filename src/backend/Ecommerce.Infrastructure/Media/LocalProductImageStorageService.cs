@@ -8,6 +8,7 @@ public sealed class LocalProductImageStorageService(ILogger<LocalProductImageSto
 {
     private const string UploadsPrefix = "/uploads/";
     private const string ProductScope = "products";
+    private const int MaxImageBytes = 8 * 1024 * 1024;
     private static readonly Dictionary<string, string> MimeToExtension = new(StringComparer.OrdinalIgnoreCase)
     {
         ["image/jpeg"] = ".jpg",
@@ -58,6 +59,26 @@ public sealed class LocalProductImageStorageService(ILogger<LocalProductImageSto
         if (!MimeToExtension.TryGetValue(mimeType, out var extension))
         {
             throw new InvalidOperationException($"Formato de imagen no permitido: {mimeType}");
+        }
+
+        return await SaveFileAsync(bytes, NormalizeScope(scope), extension, cancellationToken);
+    }
+
+    public async Task<string> SaveBinaryImageAsync(byte[] bytes, string contentType, string scope, CancellationToken cancellationToken = default)
+    {
+        if (bytes.Length == 0)
+        {
+            throw new InvalidOperationException("No se recibio contenido de imagen.");
+        }
+
+        if (bytes.Length > MaxImageBytes)
+        {
+            throw new InvalidOperationException($"La imagen supera el maximo permitido de {MaxImageBytes / (1024 * 1024)} MB.");
+        }
+
+        if (!MimeToExtension.TryGetValue(contentType.Trim(), out var extension))
+        {
+            throw new InvalidOperationException($"Formato de imagen no permitido: {contentType}");
         }
 
         return await SaveFileAsync(bytes, NormalizeScope(scope), extension, cancellationToken);

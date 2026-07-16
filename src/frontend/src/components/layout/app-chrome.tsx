@@ -88,14 +88,14 @@ export function AppChrome({ children }: Readonly<{ children: React.ReactNode }>)
     return (
       <div className="min-h-screen bg-transparent">
         <div className="sticky top-0 z-40 border-b border-[#E5EAEF] bg-white/95 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/90">
-          <div className="mx-auto flex h-[72px] w-full max-w-[1600px] items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
+          <div className="mx-auto flex w-full max-w-[1600px] flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
             <div className="flex items-center gap-3">
-              <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#E8F4FF] text-[#1D9BF0]">
-                <Rocket size={19} />
+              <div className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-[#E8F4FF] text-[#1D9BF0] sm:h-10 sm:w-10">
+                <Rocket size={18} />
               </div>
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#7A889A]">{storeName}</p>
-                <p className="text-[32px] font-extrabold leading-none text-[#1F2A37] dark:text-slate-100">Admin Console</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#7A889A] sm:text-xs sm:tracking-[0.22em]">{storeName}</p>
+                <p className="text-xl font-extrabold leading-none text-[#1F2A37] dark:text-slate-100 sm:text-[32px]">Admin Console</p>
               </div>
             </div>
 
@@ -114,7 +114,7 @@ export function AppChrome({ children }: Readonly<{ children: React.ReactNode }>)
               </div>
             )}
 
-            <div className="relative flex items-center gap-3">
+            <div className="relative ml-auto flex items-center gap-2 sm:gap-3">
               {!isLoginPage && <div className="relative">
                 <Button variant="secondary" type="button" className="h-11 rounded-2xl border border-[#DFE5EC] bg-[#F9FBFD] px-3 text-[#435266] hover:bg-[#F1F6FB] dark:border-slate-700 dark:bg-slate-900" onClick={toggleNotifications}>
                   <Bell size={16} />
@@ -153,7 +153,7 @@ export function AppChrome({ children }: Readonly<{ children: React.ReactNode }>)
               </div>}
               {!isLoginPage && (
                 <>
-                  <div className="hidden items-center gap-2 rounded-2xl border border-[#DFE5EC] bg-[#F9FBFD] px-3 py-2 sm:flex dark:border-slate-700 dark:bg-slate-900">
+                  <div className="hidden items-center gap-2 rounded-2xl border border-[#DFE5EC] bg-[#F9FBFD] px-3 py-2 md:flex dark:border-slate-700 dark:bg-slate-900">
                     <div className="h-8 w-8 rounded-full bg-[#DDEBFF]" />
                     <p className="text-sm font-semibold leading-none text-[#1F2A37] dark:text-slate-100">Administrador</p>
                   </div>
@@ -173,12 +173,12 @@ export function AppChrome({ children }: Readonly<{ children: React.ReactNode }>)
   }
 
   return (
-    <>
+    <div className="customer-shell min-h-screen">
       <SiteHeader />
       <CartDrawer />
       <VirtualShopAssistant />
       {children}
       <SiteFooter />
-    </>
+    </div>
   );
 }

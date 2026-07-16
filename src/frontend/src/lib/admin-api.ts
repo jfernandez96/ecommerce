@@ -7,6 +7,7 @@ export type BannerDto = { id: string; title: string; subtitle: string; imageUrl:
 export type ProductVariantPayload = { color: string; size: string; stock: number; priceAdjustment?: number | null };
 export type ProductVariantDto = { id: string; sku: string; color: string; size: string; stock: number; priceAdjustment?: number | null };
 export type ProductImagePayload = { url: string; color?: string | null };
+export type UploadScope = "products" | "banners" | "promotions" | "categories" | "brands";
 
 export type ProductPayload = {
   name: string;
@@ -757,6 +758,25 @@ export async function listStores(activeOnly = false) {
   });
 
   return data as StoreLocationDto[];
+}
+
+export async function uploadAdminImage(file: File, scope: UploadScope) {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("scope", scope);
+
+  const { data } = await api.post("/uploads/image", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+
+  const payload = data as { url?: string };
+  if (!payload?.url) {
+    throw new Error("No se pudo obtener la URL de la imagen subida.");
+  }
+
+  return payload.url;
 }
 
 export async function createStore(payload: CreateStorePayload) {

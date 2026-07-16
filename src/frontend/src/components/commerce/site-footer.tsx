@@ -44,19 +44,19 @@ export function SiteFooter() {
   };
 
   return (
-    <footer className="mt-16 border-t border-white/10 bg-[#15343b] text-[#f4efe6]">
+    <footer className="mt-16 border-t border-border/70 bg-[hsl(var(--customer-brand-strong))] text-[hsl(var(--customer-cta-contrast))]">
       <div className="mx-auto grid max-w-7xl gap-10 px-6 py-14 md:grid-cols-2 lg:grid-cols-4">
         <section className="space-y-4">
           <h3 className="text-lg font-bold">Informacion de la empresa</h3>
-          <p className="text-sm text-[#f4efe6]/90"><span className="font-semibold">RUC:</span> {companyData.companyRuc}</p>
-          <p className="text-sm text-[#f4efe6]/90"><span className="font-semibold">Razon social:</span> {companyData.companyBusinessName}</p>
-          <p className="text-sm text-[#f4efe6]/90"><span className="font-semibold">Direccion:</span> {companyData.companyAddress}</p>
-          <p className="text-sm text-[#f4efe6]/90">{companyData.companyPhone}</p>
-          <p className="text-sm text-[#f4efe6]/90">{companyData.companyEmail}</p>
+          <p className="text-sm text-[hsl(var(--customer-cta-contrast)/0.90)]"><span className="font-semibold">RUC:</span> {companyData.companyRuc}</p>
+          <p className="text-sm text-[hsl(var(--customer-cta-contrast)/0.90)]"><span className="font-semibold">Razon social:</span> {companyData.companyBusinessName}</p>
+          <p className="text-sm text-[hsl(var(--customer-cta-contrast)/0.90)]"><span className="font-semibold">Direccion:</span> {companyData.companyAddress}</p>
+          <p className="text-sm text-[hsl(var(--customer-cta-contrast)/0.90)]">{companyData.companyPhone}</p>
+          <p className="text-sm text-[hsl(var(--customer-cta-contrast)/0.90)]">{companyData.companyEmail}</p>
           <div className="flex items-center gap-3 pt-2">
-            <a className="grid h-10 w-10 place-items-center rounded-full border border-[#f4efe6]/40 transition hover:bg-[#f4efe6] hover:text-[#15343b]" href="#" aria-label="Facebook"><Facebook size={16} /></a>
-            <a className="grid h-10 w-10 place-items-center rounded-full border border-[#f4efe6]/40 transition hover:bg-[#f4efe6] hover:text-[#15343b]" href="#" aria-label="Instagram"><Instagram size={16} /></a>
-            <a className="grid h-10 w-10 place-items-center rounded-full border border-[#f4efe6]/40 transition hover:bg-[#f4efe6] hover:text-[#15343b]" href="#" aria-label="TikTok"><Music2 size={16} /></a>
+            <a className="grid h-10 w-10 place-items-center rounded-full border border-[hsl(var(--customer-cta-contrast)/0.40)] transition hover:bg-[hsl(var(--customer-cta-contrast))] hover:text-[hsl(var(--customer-brand-strong))]" href="#" aria-label="Facebook"><Facebook size={16} /></a>
+            <a className="grid h-10 w-10 place-items-center rounded-full border border-[hsl(var(--customer-cta-contrast)/0.40)] transition hover:bg-[hsl(var(--customer-cta-contrast))] hover:text-[hsl(var(--customer-brand-strong))]" href="#" aria-label="Instagram"><Instagram size={16} /></a>
+            <a className="grid h-10 w-10 place-items-center rounded-full border border-[hsl(var(--customer-cta-contrast)/0.40)] transition hover:bg-[hsl(var(--customer-cta-contrast))] hover:text-[hsl(var(--customer-brand-strong))]" href="#" aria-label="TikTok"><Music2 size={16} /></a>
           </div>
         </section>
 
@@ -64,7 +64,7 @@ export function SiteFooter() {
           <h3 className="text-lg font-bold">Categorias</h3>
           <nav className="flex flex-col gap-2 text-sm">
             {menuItems.map((item) => (
-              <Link key={item.href} className="text-[#f4efe6]/85 transition hover:text-white" href={item.href}>{item.label}</Link>
+              <Link key={item.href} className="text-[hsl(var(--customer-cta-contrast)/0.85)] transition hover:text-white" href={item.href}>{item.label}</Link>
             ))}
           </nav>
         </section>
@@ -72,27 +72,27 @@ export function SiteFooter() {
         <section className="space-y-4">
           <h3 className="text-lg font-bold">Contenido</h3>
           <nav className="flex flex-col gap-2 text-sm">
-            <Link className="text-[#f4efe6]/85 transition hover:text-white" href="/preguntas-frecuentes">Preguntas frecuentes</Link>
-            <Link className="text-[#f4efe6]/85 transition hover:text-white" href="/preguntas-frecuentes#terminos">Terminos y condiciones</Link>
-            <Link className="text-[#f4efe6]/85 transition hover:text-white" href="/preguntas-frecuentes#cambios">Cambios y devoluciones</Link>
+            <Link className="text-[hsl(var(--customer-cta-contrast)/0.85)] transition hover:text-white" href="/preguntas-frecuentes">Preguntas frecuentes</Link>
+            <Link className="text-[hsl(var(--customer-cta-contrast)/0.85)] transition hover:text-white" href="/preguntas-frecuentes#terminos">Terminos y condiciones</Link>
+            <Link className="text-[hsl(var(--customer-cta-contrast)/0.85)] transition hover:text-white" href="/preguntas-frecuentes#cambios">Cambios y devoluciones</Link>
           </nav>
         </section>
 
         <section className="space-y-4">
-          <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-[#f4efe6]/80">Libro de</h3>
+          <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-[hsl(var(--customer-cta-contrast)/0.80)]">Libro de</h3>
           <p className="text-2xl font-black leading-tight">Reclamaciones</p>
-          <div className="inline-flex items-center gap-3 rounded-xl border border-[#f4efe6]/30 bg-[#f4efe6]/5 px-4 py-3">
+          <div className="inline-flex items-center gap-3 rounded-xl border border-[hsl(var(--customer-cta-contrast)/0.30)] bg-[hsl(var(--customer-cta-contrast)/0.05)] px-4 py-3">
             <BookMarked size={28} />
-            <span className="text-sm text-[#f4efe6]/90">Plataforma oficial de atencion al consumidor</span>
+            <span className="text-sm text-[hsl(var(--customer-cta-contrast)/0.90)]">Plataforma oficial de atencion al consumidor</span>
           </div>
-          <a href="/libro-de-reclamaciones" target="_blank" rel="noreferrer" className="inline-flex rounded-full border border-[#f4efe6]/50 px-4 py-2 text-sm font-semibold transition hover:bg-[#f4efe6] hover:text-[#15343b]">
+          <a href="/libro-de-reclamaciones" target="_blank" rel="noreferrer" className="inline-flex rounded-full border border-[hsl(var(--customer-cta-contrast)/0.50)] px-4 py-2 text-sm font-semibold transition hover:bg-[hsl(var(--customer-cta-contrast))] hover:text-[hsl(var(--customer-brand-strong))]">
             Registrar reclamo
           </a>
         </section>
       </div>
 
-      <div className="border-t border-white/10">
-        <div className="mx-auto flex max-w-7xl flex-col gap-2 px-6 py-4 text-xs text-[#f4efe6]/70 sm:flex-row sm:items-center sm:justify-between">
+      <div className="border-t border-[hsl(var(--customer-cta-contrast)/0.10)]">
+        <div className="mx-auto flex max-w-7xl flex-col gap-2 px-6 py-4 text-xs text-[hsl(var(--customer-cta-contrast)/0.70)] sm:flex-row sm:items-center sm:justify-between">
           <p>{storeName}</p>
           <p>© {year} {storeName}. Todos los derechos reservados.</p>
         </div>

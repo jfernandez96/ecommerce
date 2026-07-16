@@ -9,6 +9,15 @@
   --border: 220 18% 88%;
   --primary: 223 89% 67%;
   --accent: 190 88% 42%;
+  --customer-bg: 210 33% 97%;
+  --customer-surface: 0 0% 100%;
+  --customer-text: 218 28% 16%;
+  --customer-muted: 214 16% 45%;
+  --customer-brand: 196 76% 34%;
+  --customer-brand-strong: 204 100% 24%;
+  --customer-cta: 8 67% 52%;
+  --customer-cta-contrast: 36 100% 98%;
+  --customer-ring: 196 76% 34%;
 }
 
 .dark {
@@ -18,6 +27,15 @@
   --border: 223 18% 24%;
   --primary: 223 89% 72%;
   --accent: 190 88% 50%;
+  --customer-bg: 221 30% 11%;
+  --customer-surface: 221 24% 14%;
+  --customer-text: 210 20% 96%;
+  --customer-muted: 215 14% 70%;
+  --customer-brand: 196 70% 56%;
+  --customer-brand-strong: 196 79% 74%;
+  --customer-cta: 8 73% 58%;
+  --customer-cta-contrast: 36 100% 98%;
+  --customer-ring: 196 70% 56%;
 }
 
 * { box-sizing: border-box; }
@@ -100,6 +118,89 @@ body {
 }
 
 @layer components {
+  .customer-shell {
+    --primary: var(--customer-brand);
+    --accent: var(--customer-cta);
+    --foreground: var(--customer-text);
+    color: hsl(var(--customer-text));
+    background:
+      radial-gradient(1100px 420px at 100% -10%, hsl(var(--customer-brand) / 0.12), transparent 56%),
+      radial-gradient(900px 320px at -10% -10%, hsl(var(--customer-cta) / 0.08), transparent 56%),
+      hsl(var(--customer-bg));
+    overflow-x: clip;
+  }
+
+  .customer-page {
+    color: hsl(var(--customer-text));
+    background: transparent;
+  }
+
+  .customer-surface {
+    border: 1px solid hsl(var(--border));
+    border-radius: 1rem;
+    background: hsl(var(--customer-surface));
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+  }
+
+  .customer-link {
+    color: hsl(var(--customer-brand));
+    transition: color 180ms ease, opacity 180ms ease;
+  }
+
+  .customer-link:hover {
+    color: hsl(var(--customer-brand-strong));
+  }
+
+  .customer-cta {
+    background: hsl(var(--customer-cta));
+    color: hsl(var(--customer-cta-contrast));
+    border: 1px solid hsl(var(--customer-cta));
+    transition: transform 180ms ease, filter 180ms ease, box-shadow 180ms ease;
+    box-shadow: 0 14px 24px hsl(var(--customer-cta) / 0.28);
+  }
+
+  .customer-cta:hover {
+    transform: translateY(-1px);
+    filter: brightness(0.95);
+    box-shadow: 0 16px 30px hsl(var(--customer-cta) / 0.34);
+  }
+
+  .customer-btn-secondary {
+    background: hsl(var(--customer-surface));
+    color: hsl(var(--customer-text));
+    border: 1px solid hsl(var(--border));
+    transition: transform 180ms ease, background-color 180ms ease;
+  }
+
+  .customer-btn-secondary:hover {
+    transform: translateY(-1px);
+    background: hsl(var(--muted));
+  }
+
+  .customer-shell a:focus-visible,
+  .customer-shell button:focus-visible,
+  .customer-shell input:focus-visible,
+  .customer-shell textarea:focus-visible,
+  .customer-shell select:focus-visible {
+    outline: 2px solid hsl(var(--customer-ring) / 0.6);
+    outline-offset: 2px;
+  }
+
+  .customer-shell img,
+  .customer-shell video {
+    max-width: 100%;
+    height: auto;
+  }
+
+  @media (max-width: 640px) {
+    .customer-shell {
+      background:
+        radial-gradient(700px 280px at 100% -10%, hsl(var(--customer-brand) / 0.13), transparent 56%),
+        radial-gradient(560px 240px at -10% -10%, hsl(var(--customer-cta) / 0.1), transparent 56%),
+        hsl(var(--customer-bg));
+    }
+  }
+
   .admin-surface {
     border: 1px solid hsl(var(--border) / 0.9);
     border-radius: 1.5rem;
@@ -130,6 +231,41 @@ body {
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: hsl(var(--foreground) / 0.64);
+  }
+
+  @media (max-width: 1024px) {
+    .admin-surface {
+      border-radius: 1rem;
+    }
+
+    .admin-surface table {
+      font-size: 0.8125rem;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .admin-surface {
+      border-radius: 0.9rem;
+    }
+
+    .admin-surface > div:first-child {
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+
+    .admin-surface h1 {
+      font-size: 1.5rem;
+      line-height: 1.1;
+    }
+
+    .admin-surface .grid {
+      gap: 0.85rem;
+    }
+
+    .admin-surface table th,
+    .admin-surface table td {
+      padding: 0.65rem 0.6rem;
+    }
   }
 }
 

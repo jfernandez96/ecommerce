@@ -109,7 +109,7 @@ export function SiteHeader() {
   };
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-background/88 backdrop-blur-xl">
+    <header className="sticky top-0 z-40 border-b border-border bg-[hsl(var(--customer-surface)/0.92)] backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-4 py-4">
         <div className="flex items-center gap-2 lg:hidden">
           <Button
@@ -120,7 +120,7 @@ export function SiteHeader() {
             {isMobileMenuOpen ? <X size={19} /> : <Menu size={19} />}
           </Button>
         </div>
-        <Link href="/" className="text-lg font-black tracking-normal">{storeName}</Link>
+        <Link href="/" className="text-lg font-black tracking-normal text-[hsl(var(--customer-brand-strong))]">{storeName}</Link>
         <nav className="hidden max-w-4xl items-center gap-4 lg:flex">
           {navigationItems.map((item) => {
             const hasChildren = item.children.length > 0;
@@ -128,9 +128,9 @@ export function SiteHeader() {
 
             if (!hasChildren) {
               return (
-                <Link key={item.id} href={item.href} className="group relative inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-[15px] font-semibold uppercase tracking-[0.04em] text-[#004A69] transition-colors hover:bg-[#F2F7FC] hover:text-[#003651]">
+                <Link key={item.id} href={item.href} className="group relative inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-[15px] font-semibold uppercase tracking-[0.04em] text-[hsl(var(--customer-brand-strong))] transition-colors hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--customer-brand))]">
                   <span>{item.label}</span>
-                  {item.isHot && <span className="absolute -right-7 -top-2 rounded-sm bg-[#E34B43] px-1.5 py-0.5 text-[9px] font-bold leading-none tracking-[0.06em] text-white">HOT</span>}
+                  {item.isHot && <span className="absolute -right-7 -top-2 rounded-sm bg-[hsl(var(--customer-cta))] px-1.5 py-0.5 text-[9px] font-bold leading-none tracking-[0.06em] text-white">HOT</span>}
                 </Link>
               );
             }
@@ -145,22 +145,22 @@ export function SiteHeader() {
                 <Link
                   href={item.href}
                   onClick={() => setHoveredGroupId(null)}
-                  className={`relative inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-[15px] font-semibold uppercase tracking-[0.04em] transition duration-200 ease-out ${isOpen ? "bg-[#E8F4FF] text-[#0F5DB3] shadow-[0_10px_22px_rgba(29,155,240,0.14)]" : "text-[#004A69] hover:-translate-y-0.5 hover:bg-[#EFF6FF] hover:text-[#003651] hover:shadow-[0_10px_22px_rgba(15,23,42,0.08)]"}`}
+                  className={`relative inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-[15px] font-semibold uppercase tracking-[0.04em] transition duration-200 ease-out ${isOpen ? "bg-[hsl(var(--customer-brand)/0.10)] text-[hsl(var(--customer-brand))] shadow-[0_10px_22px_rgba(29,155,240,0.14)]" : "text-[hsl(var(--customer-brand-strong))] hover:-translate-y-0.5 hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--customer-brand))] hover:shadow-[0_10px_22px_rgba(15,23,42,0.08)]"}`}
                 >
                   <span>{item.label}</span>
                   <ChevronDown size={14} className={`opacity-80 transition ${isOpen ? "rotate-180" : ""}`} />
-                  {item.isHot && <span className="absolute -right-7 -top-2 rounded-sm bg-[#E34B43] px-1.5 py-0.5 text-[9px] font-bold leading-none tracking-[0.06em] text-white">HOT</span>}
+                  {item.isHot && <span className="absolute -right-7 -top-2 rounded-sm bg-[hsl(var(--customer-cta))] px-1.5 py-0.5 text-[9px] font-bold leading-none tracking-[0.06em] text-white">HOT</span>}
                 </Link>
 
                 {isOpen && (
                   <div
-                    className="absolute left-0 top-[calc(100%-1px)] z-[80] w-[320px] rounded-2xl border border-[#DCE4EE] bg-white p-2 shadow-[0_18px_42px_rgba(15,23,42,0.16)] dark:border-slate-700 dark:bg-slate-900"
+                    className="absolute left-0 top-[calc(100%-1px)] z-[80] w-[320px] rounded-2xl border border-border bg-[hsl(var(--customer-surface))] p-2 shadow-[0_18px_42px_rgba(15,23,42,0.16)] dark:border-slate-700 dark:bg-slate-900"
                     onMouseEnter={() => openGroup(item.id)}
                     onMouseLeave={scheduleClose}
                   >
                     <div className="mb-2 flex items-center justify-between px-2 pt-1">
-                      <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#7A889A]">Categorias</p>
-                      <Link href={item.href} onClick={() => setHoveredGroupId(null)} className="text-xs font-semibold text-[#1D9BF0] hover:underline">Ver todo</Link>
+                      <p className="text-xs font-bold uppercase tracking-[0.18em] text-[hsl(var(--customer-muted))]">Categorias</p>
+                      <Link href={item.href} onClick={() => setHoveredGroupId(null)} className="text-xs font-semibold text-[hsl(var(--customer-brand))] hover:underline">Ver todo</Link>
                     </div>
                     <div className="max-h-[320px] overflow-auto pr-1">
                       {item.children.map((child) => (
@@ -168,9 +168,9 @@ export function SiteHeader() {
                           key={child.id}
                           href={child.href}
                           onClick={() => setHoveredGroupId(null)}
-                          className="group mb-1 flex items-center gap-2 rounded-xl px-3 py-2 text-[15px] text-[#4E6076] transition duration-200 ease-out last:mb-0 hover:-translate-y-0.5 hover:bg-[#EFF6FF] hover:text-[#003651] hover:shadow-[0_10px_20px_rgba(15,23,42,0.08)]"
+                          className="group mb-1 flex items-center gap-2 rounded-xl px-3 py-2 text-[15px] text-[hsl(var(--customer-muted))] transition duration-200 ease-out last:mb-0 hover:-translate-y-0.5 hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--customer-brand-strong))] hover:shadow-[0_10px_20px_rgba(15,23,42,0.08)]"
                         >
-                          <span className="h-1.5 w-1.5 rounded-full bg-[#BFC8D4] transition group-hover:bg-[#1D9BF0]" />
+                          <span className="h-1.5 w-1.5 rounded-full bg-[#BFC8D4] transition group-hover:bg-[hsl(var(--customer-brand))]" />
                           <span>{child.label}</span>
                         </Link>
                       ))}
@@ -196,18 +196,18 @@ export function SiteHeader() {
             </Button>
           </form>
           <Link href="/wishlist" className="relative inline-flex h-11 w-11 items-center justify-center rounded-md hover:bg-muted transition" aria-label="Favoritos">
-            <Heart size={20} className="fill-[#D72638] text-[#D72638]" />
-            {wishlistCount > 0 && <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-[#D72638] px-1 text-xs font-bold text-white">{wishlistCount}</span>}
+            <Heart size={20} className="fill-[hsl(var(--customer-cta))] text-[hsl(var(--customer-cta))]" />
+            {wishlistCount > 0 && <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-[hsl(var(--customer-cta))] px-1 text-xs font-bold text-white">{wishlistCount}</span>}
           </Link>
           <button type="button" onClick={openDrawer} className="relative inline-flex h-11 w-11 items-center justify-center rounded-md hover:bg-muted" aria-label="Carrito">
-            <ShoppingBag size={20} className="text-[#111111]" />
-            {count > 0 && <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-[#111111] px-1 text-xs font-bold text-white">{count}</span>}
+            <ShoppingBag size={20} className="text-[hsl(var(--customer-brand-strong))]" />
+            {count > 0 && <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-[hsl(var(--customer-brand-strong))] px-1 text-xs font-bold text-white">{count}</span>}
           </button>
         </div>
       </div>
 
       {isMobileMenuOpen && (
-        <div className="border-t border-border bg-background px-4 pb-5 pt-3 lg:hidden">
+        <div className="border-t border-border bg-[hsl(var(--customer-surface))] px-4 pb-5 pt-3 lg:hidden">
           <form onSubmit={handleSearchSubmit} className="mb-4 flex items-center gap-2">
             <label htmlFor="mobile-search" className="sr-only">Buscar productos</label>
             <input
@@ -224,8 +224,8 @@ export function SiteHeader() {
 
           <nav className="space-y-3">
             {navigationItems.map((item) => (
-              <div key={item.id} className="rounded-md border border-border bg-background p-3">
-                <Link href={item.href} onClick={() => setIsMobileMenuOpen(false)} className="text-sm font-semibold uppercase tracking-[0.04em] text-[#004A69]">
+              <div key={item.id} className="rounded-md border border-border bg-[hsl(var(--customer-surface))] p-3">
+                <Link href={item.href} onClick={() => setIsMobileMenuOpen(false)} className="text-sm font-semibold uppercase tracking-[0.04em] text-[hsl(var(--customer-brand-strong))]">
                   {item.label}
                 </Link>
                 {item.children.length > 0 && (

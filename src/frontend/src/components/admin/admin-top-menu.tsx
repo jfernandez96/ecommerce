@@ -140,7 +140,7 @@ export function AdminTopMenu() {
   return (
     <div className="relative z-[60] border-t border-[#E5EAEF] bg-white/98 dark:border-slate-800 dark:bg-slate-950/95">
       <div className="mx-auto w-full max-w-[1600px] px-4 sm:px-6 lg:px-8">
-        <nav className="no-scrollbar flex h-[62px] items-center gap-2">
+        <nav className="no-scrollbar hidden h-[62px] items-center gap-2 md:flex">
           {groups.map((group) => {
             const isActiveGroup = group.key === selectedGroup.key;
             const isPathActive = group.items.some((item) => item.href === pathname);
@@ -207,6 +207,61 @@ export function AdminTopMenu() {
             );
           })}
         </nav>
+
+        <div className="py-2 md:hidden">
+          <div className="no-scrollbar flex items-center gap-2 overflow-x-auto pb-2">
+            {groups.map((group) => {
+              const isActiveGroup = group.key === selectedGroup.key;
+              const isPathActive = group.items.some((item) => item.href === pathname);
+              const isPending = pendingHref != null && group.items.some((item) => item.href === pendingHref);
+
+              return (
+                <button
+                  key={`mobile-${group.key}`}
+                  type="button"
+                  onClick={() => {
+                    setHoveredGroupKey(null);
+                    setSelectedGroupKey(group.key);
+                  }}
+                  className={`inline-flex shrink-0 items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-[0.05em] transition ${
+                    isActiveGroup || isPathActive
+                      ? "bg-[#E8F4FF] text-[#1D9BF0]"
+                      : "bg-[#F6F9FC] text-[#5A6A85]"
+                  }`}
+                >
+                  {isPending ? <LoaderCircle size={14} className="animate-spin" /> : <group.icon size={14} />}
+                  <span>{group.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="no-scrollbar flex items-center gap-2 overflow-x-auto pb-2">
+            {selectedGroup.items.map((item) => {
+              const isActiveItem = pathname === item.href;
+              const isPendingItem = pendingHref === item.href;
+
+              return (
+                <Link
+                  key={`mobile-item-${item.href}`}
+                  href={item.href}
+                  onClick={() => {
+                    if (pathname !== item.href) {
+                      setPendingHref(item.href);
+                    }
+                  }}
+                  className={`inline-flex shrink-0 items-center rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                    isActiveItem
+                      ? "border-[#1D9BF0] bg-[#1D9BF0] text-white"
+                      : "border-[#DCE4EE] bg-white text-[#4E6076]"
+                  }`}
+                >
+                  {isPendingItem ? `Cargando ${item.label.toLowerCase()}...` : item.label}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -8,11 +8,30 @@ using Ecommerce.Application.Common;
 using Ecommerce.Domain.Users;
 using Ecommerce.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using QuestPDF.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
+
+const long MaxUploadBytes = 50L * 1024L * 1024L; // 50 MB
+
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.Limits.MaxRequestBodySize = MaxUploadBytes;
+});
+
+builder.Services.Configure<IISServerOptions>(options =>
+{
+    options.MaxRequestBodySize = MaxUploadBytes;
+});
+
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = MaxUploadBytes;
+    options.ValueLengthLimit = (int)MaxUploadBytes;
+});
 
 QuestPDF.Settings.License = LicenseType.Community;
 

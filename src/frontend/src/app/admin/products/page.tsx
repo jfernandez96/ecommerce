@@ -9,7 +9,7 @@ import { z } from "zod";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { Button } from "@/components/ui/button";
 import { useAppToast } from "@/components/ui/toast";
-import { createProduct, deleteProduct, getProduct, listBrands, listCategories, listStores, searchAdminProducts, setProductStatus, updateProduct } from "@/lib/admin-api";
+import { createProduct, deleteProduct, getProduct, listBrands, listCategories, listStores, searchAdminProducts, setProductStatus, updateProduct, uploadAdminImage } from "@/lib/admin-api";
 import { resolveMediaUrl } from "@/lib/media-url";
 import { formatCurrency } from "@/lib/utils";
 
@@ -21,15 +21,6 @@ const MAX_IMAGES = 4;
 
 type ExistingImageState = { url: string; color?: string | null };
 type NewImageState = { file: File; color?: string | null };
-
-function fileToDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
-}
 
 const uniqueProductCode = (base: string) => `${base || "producto"}-${Date.now().toString(36)}`.slice(0, 80);
 const getErrorMessage = (error: unknown) => {
@@ -134,7 +125,7 @@ export default function AdminProductsPage() {
     const validImages = selectedImages.filter((file) => file.size <= MAX_IMAGE_SIZE_BYTES);
     if (validImages.length < selectedImages.length)
     {
-      setMessage("Algunas imagenes superan 3 MB y no se agregaron.");
+      setMessage("Algunas imagenes superan 2 MB y no se agregaron.");
     }
 
     const currentCount = existingImages.length + newImages.length;
@@ -183,7 +174,15 @@ export default function AdminProductsPage() {
 
     const slug = values.slug || slugify(values.name);
     const generatedCode = uniqueProductCode(slug);
-    const uploadedUrls = newImages.length > 0 ? await Promise.all(newImages.map((image) => fileToDataUrl(image.file))) : [];
+    let uploadedUrls: string[] = [];
+    try {
+      uploadedUrls = newImages.length > 0
+        ? await Promise.all(newImages.map((image) => uploadAdminImage(image.file, "products")))
+        : [];
+    } catch (error) {
+      setMessage(getErrorMessage(error));
+      return;
+    }
     const uploadedImagePayload = uploadedUrls.map((url, index) => ({ url, color: newImages[index]?.color ?? null }));
     const payload = {
       ...values,

@@ -10,7 +10,7 @@ import { AdminShell } from "@/components/admin/admin-shell";
 import { ProductImage } from "@/components/commerce/product-image";
 import { Button } from "@/components/ui/button";
 import { useAppToast } from "@/components/ui/toast";
-import { createBanner, deleteBanner, listBanners, setBannerStatus, updateBanner, type BannerDto } from "@/lib/admin-api";
+import { createBanner, deleteBanner, listBanners, setBannerStatus, updateBanner, uploadAdminImage, type BannerDto } from "@/lib/admin-api";
 
 const schema = z.object({
   title: z.string().min(3, "Titulo requerido"),
@@ -28,36 +28,6 @@ type FormValues = z.infer<typeof schema>;
 type FormInput = z.input<typeof schema>;
 const defaults: FormValues = { title: "", subtitle: "", imageUrl: "", linkUrl: "#productos", placement: "home", sortOrder: 0, startsAt: "", endsAt: "", isActive: true };
 const MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024;
-const REQUIRED_BANNER_WIDTH = 1717;
-const REQUIRED_BANNER_HEIGHT = 916;
-
-function fileToDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
-}
-
-function getImageDimensions(file: File) {
-  return new Promise<{ width: number; height: number }>((resolve, reject) => {
-    const objectUrl = URL.createObjectURL(file);
-    const image = new Image();
-
-    image.onload = () => {
-      resolve({ width: image.naturalWidth, height: image.naturalHeight });
-      URL.revokeObjectURL(objectUrl);
-    };
-
-    image.onerror = () => {
-      reject(new Error("No se pudo leer la resolucion de la imagen."));
-      URL.revokeObjectURL(objectUrl);
-    };
-
-    image.src = objectUrl;
-  });
-}
 
 const toDateInput = (value?: string) => value ? new Date(value).toISOString().slice(0, 10) : "";
 const toApiDate = (value?: string) => value ? new Date(value).toISOString() : undefined;
@@ -103,20 +73,13 @@ export default function AdminBannersPage() {
       return;
     }
 
-    // try {
-    //   const { width, height } = await getImageDimensions(file);
-    //   if (width !== REQUIRED_BANNER_WIDTH || height !== REQUIRED_BANNER_HEIGHT)
-    //   {
-    //     setApiError(`La imagen debe ser exactamente de ${REQUIRED_BANNER_WIDTH}x${REQUIRED_BANNER_HEIGHT}px. Imagen actual: ${width}x${height}px.`);
-    //     return;
-    //   }
-    // } catch (error) {
-    //   setApiError(error instanceof Error ? error.message : "No se pudo validar la imagen.");
-    //   return;
-    // }
-
     setApiError("");
-    form.setValue("imageUrl", await fileToDataUrl(file), { shouldValidate: true });
+    try {
+      const uploadedUrl = await uploadAdminImage(file, "banners");
+      form.setValue("imageUrl", uploadedUrl, { shouldValidate: true });
+    } catch (error) {
+      setApiError(error instanceof Error ? error.message : "No se pudo subir la imagen.");
+    }
   };
 
   return (
@@ -145,7 +108,7 @@ export default function AdminBannersPage() {
         </form>
         <aside className="rounded-md border border-border p-5">
           <h2 className="font-bold">Imagen</h2>
-          <p className="mt-2 text-xs text-foreground/60">Medida exacta requerida: 1717 x 916 px (16:9). Tamano maximo: 2 MB.</p>
+          <p className="mt-2 text-xs text-foreground/60">Formato recomendado: JPG/PNG/WebP. Tamano maximo: 2 MB.</p>
           <p className="mt-2 rounded-md bg-amber-500/10 px-3 py-2 text-xs font-medium text-amber-700">
             Recomendacion: sube una imagen limpia, sin texto incrustado ni etiquetas promocionales, para mantener un resultado visual profesional en home.
           </p>

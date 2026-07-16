@@ -19,6 +19,22 @@ export function resolveMediaUrl(url?: string | null) {
   const origin = getApiOrigin();
   if (!origin) return value;
 
-  if (value.startsWith("/")) return `${origin}${value}`;
-  return `${origin}/${value}`;
+  const fullUrl = value.startsWith("/") ? `${origin}${value}` : `${origin}/${value}`;
+
+  if (typeof window === "undefined") return fullUrl;
+
+  try {
+    const parsed = new URL(fullUrl);
+    const isLocalHost = /^(localhost|127\.0\.0\.1)$/i.test(parsed.hostname);
+    const browserHost = window.location.hostname;
+
+    if (isLocalHost && browserHost && !/^(localhost|127\.0\.0\.1)$/i.test(browserHost)) {
+      parsed.hostname = browserHost;
+      return parsed.toString();
+    }
+  } catch {
+    return fullUrl;
+  }
+
+  return fullUrl;
 }
