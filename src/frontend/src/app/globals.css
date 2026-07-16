@@ -192,6 +192,12 @@ body {
     height: auto;
   }
 
+  /* Fill-mode catalog images must keep full container height; global img height:auto breaks card layout. */
+  .customer-shell .product-media-fill {
+    max-width: none;
+    height: 100%;
+  }
+
   @media (max-width: 640px) {
     .customer-shell {
       background:

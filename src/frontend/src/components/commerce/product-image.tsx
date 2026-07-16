@@ -38,7 +38,14 @@ export function ProductImage({ src, alt, fill, priority, sizes, className, fallb
   }
 
   if (forceNativeImage) {
-    return <img src={resolvedSrc} alt={alt} className={cn(fill && "absolute inset-0 h-full w-full", className)} onError={() => setFailed(true)} />;
+    return (
+      <img
+        src={resolvedSrc}
+        alt={alt}
+        className={cn(fill && "absolute inset-0 h-full w-full product-media-fill", className)}
+        onError={() => setFailed(true)}
+      />
+    );
   }
 
   return (

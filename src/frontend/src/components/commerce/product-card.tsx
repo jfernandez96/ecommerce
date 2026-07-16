@@ -153,7 +153,7 @@ export function ProductCard({ product, flat = false }: { product: ProductSummary
     <>
       <motion.article whileHover={{ y: -4 }} className={`group relative overflow-hidden bg-transparent transition-transform ${flat ? "" : "rounded-md"}`}>
         <Link href={`/products/${product.slug}`} className={`relative block aspect-[4/5] overflow-hidden bg-muted ${flat ? "" : "rounded-md"}`}>
-          <ProductImage src={product.imageUrl} alt={product.name} fill sizes="(min-width: 1024px) 25vw, 50vw" className="object-cover transition duration-500 group-hover:scale-105" />
+          <ProductImage src={product.imageUrl} alt={product.name} fill sizes="(min-width: 1024px) 25vw, 50vw" className="object-contain transition duration-500 group-hover:scale-105" />
 
         {isStockEmpty ? (
           <div className={`absolute left-3 top-3 bg-red-600 px-2.5 py-1.5 text-xs font-bold text-white shadow-lg ${flat ? "" : "rounded-md"}`}>

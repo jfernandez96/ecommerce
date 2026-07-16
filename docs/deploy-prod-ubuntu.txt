@@ -197,6 +197,13 @@ Desde /var/www/ecommerce:
 - SSL no emite:
   Verifica DNS apuntando al VPS Ubuntu y puerto 80 abierto.
 
+- Error 405 (HTTP verb not allowed) en produccion al editar/eliminar:
+  Suele ocurrir en IIS del backend Windows por WebDAV bloqueando PUT/PATCH/DELETE.
+  Acciones:
+    1. Deshabilitar WebDAV en el sitio de la API.
+    2. Publicar incluyendo web.config con remove de WebDAV y handler aspNetCore verb="*".
+    3. Reiniciar sitio o App Pool en IIS.
+
 14) Checklist minimo de seguridad
 - Backend con Jwt__Secret robusto y rotacion controlada.
 - Swagger restringido o deshabilitado en produccion.

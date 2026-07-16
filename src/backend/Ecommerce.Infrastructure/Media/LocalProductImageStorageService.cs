@@ -61,7 +61,8 @@ public sealed class LocalProductImageStorageService(ILogger<LocalProductImageSto
             throw new InvalidOperationException($"Formato de imagen no permitido: {mimeType}");
         }
 
-        return await SaveFileAsync(bytes, NormalizeScope(scope), extension, cancellationToken);
+        var normalizedScope = NormalizeScope(scope);
+        return await SaveFileAsync(bytes, normalizedScope, extension, cancellationToken);
     }
 
     public async Task<string> SaveBinaryImageAsync(byte[] bytes, string contentType, string scope, CancellationToken cancellationToken = default)
@@ -76,12 +77,15 @@ public sealed class LocalProductImageStorageService(ILogger<LocalProductImageSto
             throw new InvalidOperationException($"La imagen supera el maximo permitido de {MaxImageBytes / (1024 * 1024)} MB.");
         }
 
-        if (!MimeToExtension.TryGetValue(contentType.Trim(), out var extension))
+        var mimeType = NormalizeMimeType(contentType);
+
+        if (!MimeToExtension.TryGetValue(mimeType, out var extension))
         {
             throw new InvalidOperationException($"Formato de imagen no permitido: {contentType}");
         }
 
-        return await SaveFileAsync(bytes, NormalizeScope(scope), extension, cancellationToken);
+        var normalizedScope = NormalizeScope(scope);
+        return await SaveFileAsync(bytes, normalizedScope, extension, cancellationToken);
     }
 
     public bool IsManagedPath(string? imageUrl, string? scope = null)
@@ -127,7 +131,7 @@ public sealed class LocalProductImageStorageService(ILogger<LocalProductImageSto
         var metadata = value[5..commaIndex];
         if (!metadata.Contains(";base64", StringComparison.OrdinalIgnoreCase)) return false;
 
-        mimeType = metadata.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)[0].ToLowerInvariant();
+        mimeType = NormalizeMimeType(metadata.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)[0]);
         var payload = value[(commaIndex + 1)..];
         try
         {
@@ -138,6 +142,11 @@ public sealed class LocalProductImageStorageService(ILogger<LocalProductImageSto
         {
             throw new InvalidOperationException("La imagen enviada no tiene un base64 valido.");
         }
+    }
+
+    private static string NormalizeMimeType(string value)
+    {
+        return value.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)[0].Trim().ToLowerInvariant();
     }
 
     private static async Task<string> SaveFileAsync(byte[] bytes, string scope, string extension, CancellationToken cancellationToken)
