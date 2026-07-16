@@ -8,7 +8,7 @@ public sealed class LocalProductImageStorageService(ILogger<LocalProductImageSto
 {
     private const string UploadsPrefix = "/uploads/";
     private const string ProductScope = "products";
-    private const int MaxImageBytes = 8 * 1024 * 1024;
+    private const int MaxImageBytes = 25 * 1024 * 1024;
     private static readonly Dictionary<string, string> MimeToExtension = new(StringComparer.OrdinalIgnoreCase)
     {
         ["image/jpeg"] = ".jpg",

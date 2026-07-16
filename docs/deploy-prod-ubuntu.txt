@@ -121,6 +121,7 @@ Contenido HTTP inicial:
 server {
     listen 80;
     server_name tienda.midominio.com;
+  client_max_body_size 25M;
 
     location / {
         proxy_pass http://127.0.0.1:3000;
@@ -133,6 +134,10 @@ server {
         proxy_set_header Connection "upgrade";
     }
 }
+
+Nota importante para uploads de banners/promociones/productos:
+- Si Nginx no tiene client_max_body_size, devolvera 413 Request Entity Too Large (default ~1MB).
+- Mantener el mismo valor en el server HTTPS generado por Certbot (archivo en /etc/nginx/sites-available/ecommerce-frontend).
 
 Activar sitio:
   sudo ln -s /etc/nginx/sites-available/ecommerce-frontend /etc/nginx/sites-enabled/ecommerce-frontend

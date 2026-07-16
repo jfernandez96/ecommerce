@@ -11,7 +11,7 @@ namespace Ecommerce.Api.Controllers.V1;
 [Route("api/v{version:apiVersion}/uploads")]
 public sealed class UploadsController(IProductImageStorageService imageStorageService) : ControllerBase
 {
-    private const int MaxAllowedBytes = 8 * 1024 * 1024;
+    private const int MaxAllowedBytes = 25 * 1024 * 1024;
     private static readonly HashSet<string> AllowedScopes = new(StringComparer.OrdinalIgnoreCase)
     {
         "products",
@@ -33,7 +33,7 @@ public sealed class UploadsController(IProductImageStorageService imageStorageSe
 
         if (request.File.Length > MaxAllowedBytes)
         {
-            return BadRequest(new { detail = "La imagen supera 8 MB." });
+            return BadRequest(new { detail = "La imagen supera 25 MB." });
         }
 
         var scope = string.IsNullOrWhiteSpace(request.Scope) ? "products" : request.Scope.Trim();
