@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, ChevronLeft, ChevronRight, ShoppingBag } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Search, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProductImage } from "@/components/commerce/product-image";
+import { resolveMediaUrl } from "@/lib/media-url";
 import { formatCurrency } from "@/lib/utils";
 import type { ProductDetail } from "@/lib/api";
 import { useCartStore } from "@/store/cart-store";
@@ -21,9 +22,15 @@ export function ProductQuickView({ product, isOpen, onClose }: ProductQuickViewP
   const [selectedColor, setSelectedColor] = useState<string | null>(product.variants?.[0]?.color ?? null);
   const [selectedSize, setSelectedSize] = useState<string | null>(product.variants?.[0]?.size ?? null);
   const [quantity, setQuantity] = useState(1);
+  const [zoomEnabled, setZoomEnabled] = useState(false);
+  const [zoomPosition, setZoomPosition] = useState({ x: 50, y: 50 });
+  const touchStartX = useRef<number | null>(null);
+  const touchDeltaX = useRef(0);
 
   const images = useMemo(() => product.images || [], [product.images]);
   const currentImage = images[currentImageIndex];
+  const currentImageUrl = currentImage?.url ?? "";
+  const currentResolvedImage = resolveMediaUrl(currentImageUrl);
 
   useEffect(() => {
     setCurrentImageIndex(0);
@@ -33,11 +40,49 @@ export function ProductQuickView({ product, isOpen, onClose }: ProductQuickViewP
   }, [product.id, product.variants]);
 
   const nextImage = () => {
+    if (images.length <= 1) return;
     setCurrentImageIndex((prev) => (prev + 1) % images.length);
   };
 
   const prevImage = () => {
+    if (images.length <= 1) return;
     setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
+  };
+
+  const handleZoomMove = (event: React.MouseEvent<HTMLDivElement>) => {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const offsetX = ((event.clientX - bounds.left) / bounds.width) * 100;
+    const offsetY = ((event.clientY - bounds.top) / bounds.height) * 100;
+
+    setZoomPosition({
+      x: Math.min(100, Math.max(0, offsetX)),
+      y: Math.min(100, Math.max(0, offsetY))
+    });
+  };
+
+  const handleTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    touchStartX.current = event.touches[0]?.clientX ?? null;
+    touchDeltaX.current = 0;
+  };
+
+  const handleTouchMove = (event: React.TouchEvent<HTMLDivElement>) => {
+    if (touchStartX.current === null) return;
+    touchDeltaX.current = (event.touches[0]?.clientX ?? touchStartX.current) - touchStartX.current;
+  };
+
+  const handleTouchEnd = () => {
+    if (touchStartX.current === null) return;
+
+    if (Math.abs(touchDeltaX.current) >= 45) {
+      if (touchDeltaX.current < 0) {
+        nextImage();
+      } else {
+        prevImage();
+      }
+    }
+
+    touchStartX.current = null;
+    touchDeltaX.current = 0;
   };
 
   const filteredVariants = product.variants?.filter((v) =>
@@ -108,7 +153,16 @@ export function ProductQuickView({ product, isOpen, onClose }: ProductQuickViewP
             <div className="grid grid-cols-1 gap-8 p-6 md:grid-cols-2">
               {/* Image Gallery */}
               <div className="space-y-4">
-                <div className="relative aspect-square overflow-hidden rounded-lg bg-muted">
+                <div
+                  className="relative aspect-square overflow-hidden rounded-lg bg-muted"
+                  onMouseEnter={() => setZoomEnabled(true)}
+                  onMouseMove={handleZoomMove}
+                  onMouseLeave={() => setZoomEnabled(false)}
+                  onTouchStart={handleTouchStart}
+                  onTouchMove={handleTouchMove}
+                  onTouchEnd={handleTouchEnd}
+                  onTouchCancel={handleTouchEnd}
+                >
                   <AnimatePresence mode="wait">
                     <motion.div
                       key={currentImageIndex}
@@ -118,13 +172,29 @@ export function ProductQuickView({ product, isOpen, onClose }: ProductQuickViewP
                       className="absolute inset-0"
                     >
                       <ProductImage
-                        src={currentImage?.url ?? ""}
+                        src={currentImageUrl}
                         alt={currentImage?.altText ?? ""}
                         fill
                         className="object-cover"
                       />
                     </motion.div>
                   </AnimatePresence>
+
+                  <div className="pointer-events-none absolute right-3 top-3 hidden items-center gap-1 rounded-full bg-black/50 px-2 py-1 text-xs text-white sm:flex">
+                    <Search size={12} /> Zoom
+                  </div>
+
+                  {zoomEnabled && currentResolvedImage && (
+                    <div
+                      className="pointer-events-none absolute inset-0 hidden border border-white/30 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.12)] sm:block"
+                      style={{
+                        backgroundImage: `url(${currentResolvedImage})`,
+                        backgroundPosition: `${zoomPosition.x}% ${zoomPosition.y}%`,
+                        backgroundSize: "220%",
+                        backgroundRepeat: "no-repeat"
+                      }}
+                    />
+                  )}
 
                   {images.length > 1 && (
                     <>
@@ -146,6 +216,22 @@ export function ProductQuickView({ product, isOpen, onClose }: ProductQuickViewP
                     </>
                   )}
                 </div>
+
+                {images.length > 1 && (
+                  <div className="flex gap-2 overflow-x-auto pb-1 sm:hidden">
+                    {images.map((image, index) => (
+                      <button
+                        key={`${image.url}-${index}`}
+                        type="button"
+                        onClick={() => setCurrentImageIndex(index)}
+                        className={`relative h-16 w-14 shrink-0 overflow-hidden rounded-md border ${currentImageIndex === index ? "border-primary ring-1 ring-primary/50" : "border-border"}`}
+                        aria-label={`Ver imagen ${index + 1}`}
+                      >
+                        <ProductImage src={image.url} alt={image.altText ?? product.name} fill className="object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Product Info & Options */}

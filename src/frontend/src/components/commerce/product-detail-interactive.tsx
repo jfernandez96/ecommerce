@@ -1,12 +1,13 @@
 "use client";
 
-import { MapPin, MessageCircle, Share2, ShoppingBag } from "lucide-react";
+import { ChevronLeft, ChevronRight, MapPin, MessageCircle, Search, Share2, ShoppingBag } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { startTransition, useEffect, useMemo, useState } from "react";
+import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 import { ProductImage } from "@/components/commerce/product-image";
 import { QuantityStepper } from "@/components/commerce/quantity-stepper";
 import { Button } from "@/components/ui/button";
 import { type ProductDetail } from "@/lib/api";
+import { resolveMediaUrl } from "@/lib/media-url";
 import { formatCurrency } from "@/lib/utils";
 import { useCartStore } from "@/store/cart-store";
 
@@ -23,6 +24,10 @@ export function ProductDetailInteractive({ product }: Props) {
   const firstInStockVariant = variants.find((variant) => variant.stock > 0) ?? variants[0] ?? null;
 
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [zoomPosition, setZoomPosition] = useState({ x: 50, y: 50 });
+  const [zoomEnabled, setZoomEnabled] = useState(false);
+  const touchStartX = useRef<number | null>(null);
+  const touchDeltaX = useRef(0);
   const [selectedSize, setSelectedSize] = useState(firstInStockVariant?.size ?? "");
   const [selectedColor, setSelectedColor] = useState(firstInStockVariant?.color ?? "");
   const [quantity, setQuantity] = useState(1);
@@ -57,6 +62,8 @@ export function ProductDetailInteractive({ product }: Props) {
 
   const images = visibleImages.length ? visibleImages.map((image) => image.url) : [];
   const previewImages = images.length > 0 ? images.slice(0, 4) : [undefined];
+  const selectedImageSrc = images[selectedImageIndex] ?? images[0];
+  const selectedResolvedImage = resolveMediaUrl(selectedImageSrc);
 
   const variantStock = selectedVariant?.stock ?? 0;
   const canBuy = variantStock > 0;
@@ -94,6 +101,52 @@ export function ProductDetailInteractive({ product }: Props) {
     if (selectedImageIndex >= images.length) setSelectedImageIndex(0);
   }, [images.length, selectedImageIndex]);
 
+  const showPreviousImage = () => {
+    if (images.length <= 1) return;
+    setSelectedImageIndex((current) => (current - 1 + images.length) % images.length);
+  };
+
+  const showNextImage = () => {
+    if (images.length <= 1) return;
+    setSelectedImageIndex((current) => (current + 1) % images.length);
+  };
+
+  const handleZoomMove = (event: React.MouseEvent<HTMLDivElement>) => {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const offsetX = ((event.clientX - bounds.left) / bounds.width) * 100;
+    const offsetY = ((event.clientY - bounds.top) / bounds.height) * 100;
+
+    setZoomPosition({
+      x: Math.min(100, Math.max(0, offsetX)),
+      y: Math.min(100, Math.max(0, offsetY))
+    });
+  };
+
+  const handleTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    touchStartX.current = event.touches[0]?.clientX ?? null;
+    touchDeltaX.current = 0;
+  };
+
+  const handleTouchMove = (event: React.TouchEvent<HTMLDivElement>) => {
+    if (touchStartX.current === null) return;
+    touchDeltaX.current = (event.touches[0]?.clientX ?? touchStartX.current) - touchStartX.current;
+  };
+
+  const handleTouchEnd = () => {
+    if (touchStartX.current === null) return;
+
+    if (Math.abs(touchDeltaX.current) >= 45) {
+      if (touchDeltaX.current < 0) {
+        showNextImage();
+      } else {
+        showPreviousImage();
+      }
+    }
+
+    touchStartX.current = null;
+    touchDeltaX.current = 0;
+  };
+
   useEffect(() => {
     if (variantStock > 0 && quantity > variantStock) {
       setQuantity(variantStock);
@@ -120,9 +173,74 @@ export function ProductDetailInteractive({ product }: Props) {
               </button>
             ))}
           </div>
-          <div className="relative aspect-[4/5] overflow-hidden rounded-xl bg-muted">
-            <ProductImage src={images[selectedImageIndex] ?? images[0]} alt={product.name} fill priority className="object-cover" />
+          <div
+            className="relative aspect-[4/5] overflow-hidden rounded-xl bg-muted"
+            onMouseEnter={() => setZoomEnabled(true)}
+            onMouseMove={handleZoomMove}
+            onMouseLeave={() => setZoomEnabled(false)}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onTouchCancel={handleTouchEnd}
+          >
+            <ProductImage src={selectedImageSrc} alt={product.name} fill priority className="object-cover" />
+
+            <div className="pointer-events-none absolute right-3 top-3 hidden items-center gap-1 rounded-full bg-black/50 px-2 py-1 text-xs text-white sm:flex">
+              <Search size={12} /> Zoom
+            </div>
+
+            {zoomEnabled && selectedResolvedImage && (
+              <div
+                className="pointer-events-none absolute inset-0 hidden border border-white/30 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.12)] sm:block"
+                style={{
+                  backgroundImage: `url(${selectedResolvedImage})`,
+                  backgroundPosition: `${zoomPosition.x}% ${zoomPosition.y}%`,
+                  backgroundSize: "220%",
+                  backgroundRepeat: "no-repeat"
+                }}
+              />
+            )}
+
+            {images.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={showPreviousImage}
+                  className="absolute left-2 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-black/55 text-white sm:hidden"
+                  aria-label="Imagen anterior"
+                >
+                  <ChevronLeft size={18} />
+                </button>
+                <button
+                  type="button"
+                  onClick={showNextImage}
+                  className="absolute right-2 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-black/55 text-white sm:hidden"
+                  aria-label="Imagen siguiente"
+                >
+                  <ChevronRight size={18} />
+                </button>
+                <div className="absolute bottom-2 left-1/2 rounded-full bg-black/55 px-2 py-1 text-[11px] text-white sm:hidden -translate-x-1/2">
+                  {selectedImageIndex + 1}/{images.length}
+                </div>
+              </>
+            )}
           </div>
+
+          {images.length > 1 && (
+            <div className="mt-3 flex gap-2 overflow-x-auto pb-1 sm:hidden">
+              {images.map((imageUrl, index) => (
+                <button
+                  key={`${imageUrl}-${index}`}
+                  type="button"
+                  onClick={() => setSelectedImageIndex(index)}
+                  className={`relative h-16 w-14 shrink-0 overflow-hidden rounded-md border ${selectedImageIndex === index ? "border-primary ring-1 ring-primary/50" : "border-border"}`}
+                  aria-label={`Ver imagen ${index + 1}`}
+                >
+                  <ProductImage src={imageUrl} alt={product.name} fill className="object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
         </section>
 
         <section className="space-y-7">
