@@ -32,7 +32,7 @@ export function AdminShell({ title, description, children }: { title: string; de
           </div>
         </div>
 
-        <div className="p-4 sm:p-6 lg:p-7">
+        <div className="admin-content p-4 sm:p-6 lg:p-7">
           {children}
         </div>
       </section>

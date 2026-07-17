@@ -99,6 +99,7 @@ export default function AdminSalesPage() {
   const [sendingOrderId, setSendingOrderId] = useState<string | null>(null);
   const [downloadingFileKey, setDownloadingFileKey] = useState<string | null>(null);
   const [sunatDetailModal, setSunatDetailModal] = useState<SunatDetailModalState>(null);
+  const [mobileListQuery, setMobileListQuery] = useState("");
 
   const filters = useMemo(() => ({ startDate, endDate, product: product.trim(), page, pageSize }), [endDate, page, pageSize, product, startDate]);
 
@@ -127,6 +128,11 @@ export default function AdminSalesPage() {
 
   const result = salesQuery.data;
   const items = result?.page.items ?? [];
+  const mobileFilteredItems = useMemo(() => {
+    const term = mobileListQuery.trim().toLowerCase();
+    if (!term) return items;
+    return items.filter((item) => (`${item.orderNumber} ${item.customerName} ${item.customerEmail} ${item.productName} ${item.sku}`).toLowerCase().includes(term));
+  }, [items, mobileListQuery]);
   const summary = result?.summary;
   const dashboard = result?.dashboard;
   const totalPages = Math.max(result?.page.totalPages ?? 1, 1);
@@ -321,7 +327,101 @@ export default function AdminSalesPage() {
             </div>
           </div>
 
-          <div className="overflow-auto">
+          <div className="space-y-3 p-4 md:hidden">
+            <div className="sticky top-2 z-10 rounded-xl border border-border bg-background/95 p-2 backdrop-blur">
+              <div className="relative">
+                <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-foreground/45" />
+                <input
+                  value={mobileListQuery}
+                  onChange={(event) => setMobileListQuery(event.target.value)}
+                  className="w-full rounded-md border border-border bg-background py-2 pl-8 pr-3 text-xs"
+                  placeholder="Buscar orden, cliente, producto o SKU"
+                />
+              </div>
+            </div>
+            {salesQuery.isLoading && <p className="text-sm text-foreground/60">Cargando ventas...</p>}
+            {!salesQuery.isLoading && items.length === 0 && <p className="text-sm text-foreground/60">No hay ventas para el filtro aplicado.</p>}
+            {!salesQuery.isLoading && items.length > 0 && mobileFilteredItems.length === 0 && <p className="text-sm text-foreground/60">Sin coincidencias para la busqueda.</p>}
+            {mobileFilteredItems.map((item) => (
+              <article key={`${item.orderId}-${item.productId}-${item.productVariantId ?? "base"}-${item.sku}-${item.saleDate}`} className="rounded-xl border border-border bg-background p-3 text-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-semibold">{item.orderNumber}</p>
+                    <p className="mt-1 text-xs text-foreground/55">{formatDateTime(item.saleDate)}</p>
+                  </div>
+                  <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${sunatStatusClass(item.sunatStatus)}`}>{sunatStatusLabel(item.sunatStatus)}</span>
+                </div>
+
+                <div className="mt-3 space-y-1 text-xs text-foreground/70">
+                  <p><span className="font-semibold">Cliente:</span> {item.customerName}</p>
+                  <p className="truncate"><span className="font-semibold">Correo:</span> {item.customerEmail}</p>
+                  <p><span className="font-semibold">Producto:</span> {item.productName}</p>
+                  <p><span className="font-semibold">SKU:</span> {item.sku}</p>
+                  <p><span className="font-semibold">Metodo:</span> {paymentMethodLabels[item.paymentMethod] ?? "No definido"}</p>
+                  <p><span className="font-semibold">Cantidad:</span> {item.quantity}</p>
+                </div>
+
+                <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                  <p className="rounded-md border border-border p-2"><span className="block text-foreground/55">P. unit.</span><strong>{formatCurrency(item.unitPrice)}</strong></p>
+                  <p className="rounded-md border border-border p-2"><span className="block text-foreground/55">Total linea</span><strong>{formatCurrency(item.lineTotal)}</strong></p>
+                  <p className="col-span-2 rounded-md border border-border p-2"><span className="block text-foreground/55">Total orden</span><strong>{formatCurrency(item.orderTotal)}</strong></p>
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {showObservationIcon(item.sunatStatus, item.sunatStatusMessage) && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => setSunatDetailModal({
+                        orderNumber: item.orderNumber,
+                        status: item.sunatStatus,
+                        message: item.sunatStatusMessage ?? "SUNAT no devolvio detalle adicional.",
+                      })}
+                    >
+                      Ver detalle SUNAT
+                    </Button>
+                  )}
+
+                  {item.sunatStatus === "accepted" ? (
+                    <>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        disabled={downloadingFileKey === `${item.orderId}-xml`}
+                        onClick={() => handleDownloadXml(item.orderId)}
+                      >
+                        XML
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        disabled={downloadingFileKey === `${item.orderId}-cdr`}
+                        onClick={() => handleDownloadCdr(item.orderId)}
+                      >
+                        CDR
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      disabled={
+                        sendingOrderId === item.orderId ||
+                        item.paymentStatus !== "confirmed" ||
+                        item.orderStatus === 5 ||
+                        item.orderStatus === 6
+                      }
+                      onClick={() => handleSendToSunat(item.orderId)}
+                    >
+                      {sendingOrderId === item.orderId ? "Enviando..." : "Enviar SUNAT"}
+                    </Button>
+                  )}
+                </div>
+              </article>
+            ))}
+          </div>
+
+          <div className="hidden overflow-auto md:block">
             <table className="w-full min-w-[1440px] text-sm">
               <thead className="bg-muted/50 text-left">
                 <tr>

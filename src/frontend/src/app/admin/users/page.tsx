@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Edit3, KeyRound, Power, Save, Shield } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Search } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { AdminShell } from "@/components/admin/admin-shell";
@@ -81,6 +82,7 @@ export default function AdminUsersPage() {
   const [passwordUserId, setPasswordUserId] = useState<string | null>(null);
   const [passwordValue, setPasswordValue] = useState("");
   const [editUser, setEditUser] = useState<{ id: string; email: string; fullName: string } | null>(null);
+  const [mobileListQuery, setMobileListQuery] = useState("");
 
   useEffect(() => {
     setPage(1);
@@ -103,6 +105,11 @@ export default function AdminUsersPage() {
   });
 
   const users = usersPage?.items ?? [];
+  const mobileFilteredUsers = users.filter((user) => {
+    const term = mobileListQuery.trim().toLowerCase();
+    if (!term) return true;
+    return (`${user.fullName} ${user.email}`).toLowerCase().includes(term);
+  });
   const usersTotalItems = usersPage?.totalItems ?? 0;
   const usersTotalPages = usersPage?.totalPages ?? 1;
 
@@ -194,7 +201,103 @@ export default function AdminUsersPage() {
       </section>
 
       <section className="mt-6 overflow-hidden rounded-md border border-border">
-        <table className="w-full text-sm">
+        <div className="space-y-3 p-4 md:hidden">
+          <div className="sticky top-2 z-10 rounded-xl border border-border bg-background/95 p-2 backdrop-blur">
+            <div className="relative">
+              <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-foreground/45" />
+              <input
+                value={mobileListQuery}
+                onChange={(event) => setMobileListQuery(event.target.value)}
+                className="w-full rounded-md border border-border bg-background py-2 pl-8 pr-3 text-xs"
+                placeholder="Buscar usuario o correo"
+              />
+            </div>
+          </div>
+          {isLoading && <p className="text-sm text-foreground/70">Cargando usuarios...</p>}
+          {!isLoading && users.length === 0 && <p className="text-sm text-foreground/70">No hay usuarios para los filtros seleccionados.</p>}
+          {!isLoading && users.length > 0 && mobileFilteredUsers.length === 0 && <p className="text-sm text-foreground/70">Sin coincidencias para la busqueda.</p>}
+          {mobileFilteredUsers.map((user) => (
+            <article key={user.id} className="rounded-xl border border-border bg-background p-3 text-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-semibold">{user.fullName}</p>
+                  <p className="mt-1 text-xs text-foreground/60">{user.email}</p>
+                </div>
+                <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${user.isActive ? "bg-emerald-100 text-emerald-800" : "bg-slate-200 text-slate-700"}`}>
+                  {user.isActive ? "Activo" : "Inactivo"}
+                </span>
+              </div>
+
+              <div className="mt-3 space-y-2">
+                <label className="block text-xs font-semibold text-foreground/60">Rol</label>
+                <select
+                  className="w-full rounded-md border border-border bg-background p-2"
+                  value={user.role}
+                  onChange={(event) => {
+                    const nextRole = event.target.value as AdminUserDto["role"];
+                    setUserRole(user.id, nextRole)
+                      .then(() => {
+                        queryClient.invalidateQueries({ queryKey: ["users"] });
+                        queryClient.invalidateQueries({ queryKey: ["user-audits"] });
+                        toast.success("Rol actualizado correctamente.");
+                      })
+                      .catch((requestError: Error) => {
+                        setApiError(requestError.message);
+                        toast.error(requestError.message);
+                      });
+                  }}
+                >
+                  <option value="Administrator">Administrador</option>
+                  <option value="Employee">Empleado</option>
+                  <option value="Customer">Cliente</option>
+                </select>
+                <p className="text-xs text-foreground/60">Creado: {formatDateTime(user.createdAt)}</p>
+              </div>
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button
+                  variant="ghost"
+                  onClick={() => setEditUser({ id: user.id, email: user.email, fullName: user.fullName })}
+                >
+                  <Edit3 size={16} />
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() =>
+                    setUserStatus(user.id, !user.isActive)
+                      .then(() => {
+                        queryClient.invalidateQueries({ queryKey: ["users"] });
+                        queryClient.invalidateQueries({ queryKey: ["user-audits"] });
+                        toast.success(`Usuario ${user.isActive ? "desactivado" : "activado"}.`);
+                      })
+                      .catch((requestError: Error) => {
+                        setApiError(requestError.message);
+                        toast.error(requestError.message);
+                      })
+                  }
+                >
+                  <Power size={16} />
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setPasswordUserId(user.id);
+                    setPasswordValue("");
+                  }}
+                >
+                  <KeyRound size={16} />
+                </Button>
+                {user.role !== "Customer" && (
+                  <span className="inline-flex items-center gap-1 rounded-md bg-[#E8F4FF] px-2 py-1 text-xs font-semibold text-[#1D9BF0]">
+                    <Shield size={12} /> Acceso al sistema
+                  </span>
+                )}
+              </div>
+            </article>
+          ))}
+        </div>
+
+        <table className="hidden w-full text-sm md:table">
           <thead className="bg-muted text-left">
             <tr>
               <th className="p-3">Usuario</th>

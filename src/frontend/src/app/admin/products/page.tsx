@@ -70,6 +70,7 @@ export default function AdminProductsPage() {
   const [message, setMessage] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [mobileListQuery, setMobileListQuery] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [variantStockByKey, setVariantStockByKey] = useState<Record<string, number>>({});
@@ -81,6 +82,11 @@ export default function AdminProductsPage() {
   const { data: brands = [] } = useQuery({ queryKey: ["brands"], queryFn: listBrands });
   const { data: stores = [] } = useQuery({ queryKey: ["stores-for-products"], queryFn: () => listStores(true) });
   const products = productsPage?.items ?? [];
+  const mobileFilteredProducts = useMemo(() => {
+    const term = mobileListQuery.trim().toLowerCase();
+    if (!term) return products;
+    return products.filter((product) => (`${product.name} ${product.sku ?? ""} ${product.brand} ${product.description ?? ""}`).toLowerCase().includes(term));
+  }, [mobileListQuery, products]);
   const totalItems = productsPage?.totalItems ?? 0;
   const totalPages = Math.max(productsPage?.totalPages ?? 1, 1);
   const isAlertMessage = /(error|network|ocurrio|debes|solo puedes|invalido|no autorizada)/i.test(message);
@@ -319,7 +325,46 @@ export default function AdminProductsPage() {
           </div>
 
           <div className="max-h-[64vh] overflow-auto rounded-md border border-border">
-            <table className="w-full text-sm">
+            <div className="space-y-3 p-3 md:hidden">
+              <div className="sticky top-2 z-10 rounded-xl border border-border bg-background/95 p-2 backdrop-blur">
+                <label className="relative block">
+                  <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-foreground/45" />
+                  <input
+                    value={mobileListQuery}
+                    onChange={(event) => setMobileListQuery(event.target.value)}
+                    className="w-full rounded-md border border-border bg-background py-2 pl-8 pr-3 text-xs"
+                    placeholder="Filtrar lista cargada"
+                  />
+                </label>
+              </div>
+
+              {isProductsLoading && <p className="p-2 text-sm text-foreground/60">Cargando productos...</p>}
+              {!isProductsLoading && products.length === 0 && <p className="p-2 text-sm text-foreground/60">No se encontraron productos con ese criterio.</p>}
+              {!isProductsLoading && products.length > 0 && mobileFilteredProducts.length === 0 && <p className="p-2 text-sm text-foreground/60">Sin coincidencias para la busqueda.</p>}
+
+              {mobileFilteredProducts.map((product) => (
+                <article key={product.id} className="rounded-xl border border-border bg-background p-3 text-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold">{product.name}</p>
+                      <p className="mt-1 truncate text-xs text-foreground/60">SKU: {product.sku || "-"}</p>
+                      <p className="mt-1 truncate text-xs text-foreground/60">Marca: {product.brand}</p>
+                    </div>
+                    <p className="shrink-0 text-xs font-semibold">{formatCurrency(product.salePrice ?? product.regularPrice)}</p>
+                  </div>
+
+                  <p className="mt-2 line-clamp-2 text-xs text-foreground/65">{product.description || "Sin descripcion"}</p>
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Button variant="ghost" onClick={() => startEdit(product.id)} aria-label="Editar producto"><Edit3 size={16} /></Button>
+                    <Button variant="ghost" onClick={() => setProductStatus(product.id, product.stock > 0 ? 2 : 1).then(() => { queryClient.invalidateQueries({ queryKey: ["admin-products-search"] }); toast.success("Estado de producto actualizado correctamente."); }).catch((error) => { const message = getErrorMessage(error); setMessage(message); toast.error(message); })} aria-label="Cambiar estado"><Power size={16} /></Button>
+                    <Button variant="ghost" onClick={() => confirm("Eliminar producto?") && deleteProduct(product.id).then(() => { queryClient.invalidateQueries({ queryKey: ["admin-products-search"] }); toast.success("Producto eliminado correctamente."); }).catch((error) => { const message = getErrorMessage(error); setMessage(message); toast.error(message); })} aria-label="Eliminar producto"><Trash2 size={16} /></Button>
+                  </div>
+                </article>
+              ))}
+            </div>
+
+            <table className="hidden w-full text-sm md:table">
               <thead className="sticky top-0 bg-muted text-left">
                 <tr>
                   <th className="p-3">Producto</th>
@@ -365,7 +410,7 @@ export default function AdminProductsPage() {
 
         <div className="space-y-5">
           <form onSubmit={form.handleSubmit(submit)} className="rounded-md border border-border p-5">
-          <div className="flex items-center justify-between gap-3"><h2 className="font-bold">{editingId ? "Editar producto" : "Registrar producto"}</h2><div className="flex gap-2"><Button disabled={createMutation.isPending || updateMutation.isPending}><PackagePlus size={18} /> {editingId ? "Actualizar" : "Guardar"}</Button>{editingId && <Button type="button" variant="secondary" onClick={cancelEdit}><X size={18} /> Cancelar</Button>}</div></div>
+          <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center"><h2 className="font-bold">{editingId ? "Editar producto" : "Registrar producto"}</h2><div className="flex w-full flex-wrap gap-2 sm:w-auto"><Button className="w-full sm:w-auto" disabled={createMutation.isPending || updateMutation.isPending}><PackagePlus size={18} /> {editingId ? "Actualizar" : "Guardar"}</Button>{editingId && <Button className="w-full sm:w-auto" type="button" variant="secondary" onClick={cancelEdit}><X size={18} /> Cancelar</Button>}</div></div>
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
             <input type="hidden" {...form.register("stock", { valueAsNumber: true })} />
             <input className="rounded-md border border-border bg-background p-3" placeholder="Nombre" {...form.register("name", { onBlur: () => !form.getValues("slug") && form.setValue("slug", slugify(form.getValues("name")), { shouldValidate: true }) })} />
@@ -434,7 +479,7 @@ export default function AdminProductsPage() {
               <input ref={fileInputRef} type="file" multiple accept="image/*" className="hidden" onChange={onImageSelection} />
             </label>
 
-            <div className="mt-4 grid grid-cols-4 gap-2">
+            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
               {existingImages.map((image, index) => (
                 <div key={`existing-${image.url}-${index}`} className="space-y-2">
                   <button type="button" onClick={() => removeExistingImage(index)} className="aspect-square w-full rounded-md bg-cover bg-center" style={{ backgroundImage: `url(${resolveMediaUrl(image.url)})` }} aria-label="Eliminar imagen existente" />

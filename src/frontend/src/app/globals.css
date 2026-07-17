@@ -272,6 +272,21 @@ body {
     .admin-surface table td {
       padding: 0.65rem 0.6rem;
     }
+
+    .admin-surface .admin-content .overflow-hidden {
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .admin-surface .admin-content .overflow-hidden > table {
+      min-width: 720px;
+    }
+
+    .admin-surface .admin-content table {
+      width: max-content;
+      min-width: 100%;
+    }
   }
 }
 

@@ -141,6 +141,7 @@ export default function AdminOrdersPage() {
   const [pageSize, setPageSize] = useState(20);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(selectedFromQuery);
   const [pendingAction, setPendingAction] = useState<PendingOrderAction | null>(null);
+  const [mobileListQuery, setMobileListQuery] = useState("");
 
   const { data, isLoading, isFetching } = useQuery({
     queryKey: ["admin-orders", startDate, endDate, paymentStatus, orderStatus, customerName, orderNumber, page, pageSize],
@@ -157,6 +158,11 @@ export default function AdminOrdersPage() {
   });
 
   const orders = data?.page.items ?? [];
+  const mobileFilteredOrders = useMemo(() => {
+    const term = mobileListQuery.trim().toLowerCase();
+    if (!term) return orders;
+    return orders.filter((order) => (`${order.number} ${order.customerName} ${order.customerEmail}`).toLowerCase().includes(term));
+  }, [mobileListQuery, orders]);
   const summary = data?.summary;
   const totalPages = Math.max(data?.page.totalPages ?? 1, 1);
 
@@ -526,7 +532,50 @@ export default function AdminOrdersPage() {
               </select>
             </div>
 
-            <div className="overflow-auto">
+            <div className="space-y-3 p-4 md:hidden">
+              <div className="sticky top-2 z-10 rounded-xl border border-border bg-background/95 p-2 backdrop-blur">
+                <div className="relative">
+                  <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-foreground/45" />
+                  <input
+                    value={mobileListQuery}
+                    onChange={(event) => setMobileListQuery(event.target.value)}
+                    className="w-full rounded-md border border-border bg-background py-2 pl-8 pr-3 text-xs"
+                    placeholder="Buscar orden, cliente o correo"
+                  />
+                </div>
+              </div>
+              {isLoading && <p className="text-sm text-foreground/60">Cargando ordenes...</p>}
+              {!isLoading && orders.length === 0 && <p className="text-sm text-foreground/60">No hay ordenes para esos filtros.</p>}
+              {!isLoading && orders.length > 0 && mobileFilteredOrders.length === 0 && <p className="text-sm text-foreground/60">Sin coincidencias para la busqueda.</p>}
+              {mobileFilteredOrders.map((order) => {
+                const isSelected = order.id === selectedOrderId;
+                return (
+                  <article key={order.id} onClick={() => setSelectedOrderId(order.id)} className={`rounded-xl border p-3 text-sm transition ${isSelected ? "border-primary/40 bg-accent/5" : "border-border bg-background"}`}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-semibold">{order.number}</p>
+                        <p className="mt-1 text-xs text-foreground/55">{formatDateTime(order.createdAt)}</p>
+                        <p className="mt-1 text-xs text-foreground/55">{order.itemCount} item(s)</p>
+                      </div>
+                      <p className="text-sm font-bold">{formatCurrency(order.total)}</p>
+                    </div>
+
+                    <div className="mt-3 space-y-1 text-xs text-foreground/70">
+                      <p><span className="font-semibold">Cliente:</span> {order.customerName}</p>
+                      <p className="truncate"><span className="font-semibold">Correo:</span> {order.customerEmail}</p>
+                      <p><span className="font-semibold">Metodo:</span> {paymentMethodLabels[order.paymentMethod] ?? "No definido"}</p>
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${paymentBadgeClass(order.paymentStatus)}`}>{paymentStatusLabel(order.paymentStatus)}</span>
+                      <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${orderBadgeClass(order.status)}`}>{orderStatusLabels[order.status] ?? "Sin estado"}</span>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+
+            <div className="hidden overflow-auto md:block">
               <table className="w-full text-sm">
                 <thead className="bg-muted/50 text-left">
                   <tr>
