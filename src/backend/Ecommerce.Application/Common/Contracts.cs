@@ -145,6 +145,16 @@ public interface IWhatsAppNotificationService
     Task SendTestMessageAsync(string toPhone, string message, CancellationToken cancellationToken = default);
 }
 
+public interface IIntegrationClientSecurityService
+{
+    Task<IntegrationClientAccessResult> AuthorizeAsync(string? clientId, string? apiKey, string scope, CancellationToken cancellationToken = default);
+}
+
+public interface IIntegrationAuditService
+{
+    Task WriteAsync(IntegrationAuditEntry entry, CancellationToken cancellationToken = default);
+}
+
 public sealed record PagedResult<T>(IReadOnlyList<T> Items, int Page, int PageSize, long TotalItems)
 {
     public int TotalPages => (int)Math.Ceiling(TotalItems / (double)Math.Max(PageSize, 1));
@@ -213,6 +223,20 @@ public sealed record PaymentPreparationResult(string Provider, string Status, st
 public sealed record PaymentPreparationDto(Guid PaymentId, string Provider, string Status, string IntegrationMode, string ExternalReference, string? PublicKey, string? ClientSecret, string? CheckoutUrl, string? QrCodeUrl, DateTimeOffset? ExpiresAt, IReadOnlyList<string> Instructions);
 public sealed record CustomerPromotionProfileDto(int TotalOrders, int ConfirmedOrders, decimal TotalSpent, DateTimeOffset? LastOrderAt);
 public sealed record CouponValidationResultDto(bool IsValid, string Message, decimal DiscountAmount, decimal FinalSubtotal, string? PromotionName, string? PromotionType);
+public sealed record IntegrationWhatsAppDispatchResultDto(string Status, string ClientId, string Message, string? ExternalId, DateTimeOffset SentAt);
+public sealed record IntegrationClientAccessResult(bool IsAllowed, string? ClientId, int? RetryAfterSeconds, string ErrorCode, string Message);
+public sealed record IntegrationAuditEntry(
+    DateTimeOffset Timestamp,
+    string Channel,
+    string Scope,
+    string? ClientId,
+    string? SourceSystem,
+    string? ExternalId,
+    string? ToPhone,
+    string Status,
+    string Detail,
+    string? IpAddress,
+    string? UserAgent);
 public sealed record OrderCheckoutResultDto(Guid OrderId, string OrderNumber, string Status, decimal Total, Guid StoreId, string StoreName, string FulfillmentType, PaymentPreparationDto Payment);
 public sealed record OrderAdminSearchRequest(string? OrderNumber, string? CustomerName, string? PaymentStatus, int? OrderStatus, DateOnly? StartDate, DateOnly? EndDate, int Page = 1, int PageSize = 20);
 public sealed record OrderAdminListItemDto(Guid Id, string Number, Guid StoreId, string StoreName, string FulfillmentType, string CustomerName, string CustomerPhone, string CustomerEmail, int ItemCount, decimal Total, int Status, int PaymentMethod, string PaymentStatus, string PaymentProvider, DateTimeOffset CreatedAt);

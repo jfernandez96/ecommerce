@@ -94,6 +94,7 @@ Nota:
 ## Deployment
 
 - Guía de despliegue a producción en Ubuntu con dominio, Nginx y SSL Let's Encrypt: [docs/deploy-prod-ubuntu.txt](docs/deploy-prod-ubuntu.txt)
+- Guía de integración para terceros (envío de WhatsApp con API key, rate limit y auditoría): [docs/integrations-whatsapp.md](docs/integrations-whatsapp.md)
 
 ## Módulos cubiertos
 

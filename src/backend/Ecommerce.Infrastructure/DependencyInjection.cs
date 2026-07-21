@@ -38,6 +38,8 @@ public static class DependencyInjection
         services.AddScoped<IClaimBookRepository, ClaimBookRepository>();
         services.AddScoped<IOrderNotificationService, OrderNotificationService>();
         services.AddScoped<IWhatsAppNotificationService, WhatsAppNotificationService>();
+        services.AddScoped<IIntegrationClientSecurityService, IntegrationClientSecurityService>();
+        services.AddSingleton<IIntegrationAuditService, FileIntegrationAuditService>();
         services.AddScoped<IProductImageStorageService, LocalProductImageStorageService>();
         services.AddScoped<IProductReadService, ProductReadService>();
         services.AddScoped<IPaymentPreparationService, PaymentPreparationService>();
