@@ -17,6 +17,10 @@ public sealed class OrdersController(ISender sender) : ControllerBase
     public Task<OrderCheckoutResultDto> Checkout(CreateOrderCommand command, CancellationToken cancellationToken) =>
         sender.Send(command, cancellationToken);
 
+    [HttpPost("checkout/validate-coupon")]
+    public Task<CouponValidationResultDto> ValidateCoupon(ValidateCheckoutCouponCommand command, CancellationToken cancellationToken) =>
+        sender.Send(command, cancellationToken);
+
     [Authorize(Policy = UserPermissionNames.OrdersRead)]
     [HttpGet("admin")]
     public Task<OrderAdminSearchResultDto> SearchAdmin([FromQuery] OrderAdminSearchRequest request, CancellationToken cancellationToken) =>

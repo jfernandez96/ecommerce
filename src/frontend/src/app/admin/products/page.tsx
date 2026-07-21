@@ -19,7 +19,7 @@ const variantKey = (size: string, color: string) => `${size.toLowerCase()}::${co
 const productDefaults = { name: "", slug: "", sku: "", code: "", brandId: "", categoryId: "", mainStoreId: "", regularPrice: undefined, salePrice: undefined, cost: undefined, stock: undefined, minimumStock: undefined, weightKg: undefined, material: "", sizesCsv: "", colorsCsv: "", description: "", longDescription: "", videoUrl: "", seoTitle: "", seoDescription: "", status: 1 };
 const MAX_IMAGES = 4;
 
-type ExistingImageState = { url: string; color?: string | null };
+type ExistingImageState = { url: string; color?: string | null; cacheTag?: string };
 type NewImageState = { file: File; color?: string | null };
 
 const uniqueProductCode = (base: string) => `${base || "producto"}-${Date.now().toString(36)}`.slice(0, 80);
@@ -247,7 +247,8 @@ export default function AdminProductsPage() {
           (product.variants ?? []).map((variant) => [variantKey(variant.size, variant.color), Number(variant.stock ?? 0)])
         )
       );
-      setExistingImages(product.images.slice(0, MAX_IMAGES).map((image) => ({ url: image.url, color: image.color ?? null })));
+      const cacheTag = String(Date.now());
+      setExistingImages(product.images.slice(0, MAX_IMAGES).map((image) => ({ url: image.url, color: image.color ?? null, cacheTag })));
       setNewImages([]);
       if (fileInputRef.current) fileInputRef.current.value = "";
       setMessage("Editando producto seleccionado.");
@@ -482,7 +483,7 @@ export default function AdminProductsPage() {
             <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
               {existingImages.map((image, index) => (
                 <div key={`existing-${image.url}-${index}`} className="space-y-2">
-                  <button type="button" onClick={() => removeExistingImage(index)} className="aspect-square w-full rounded-md bg-cover bg-center" style={{ backgroundImage: `url(${resolveMediaUrl(image.url)})` }} aria-label="Eliminar imagen existente" />
+                  <button type="button" onClick={() => removeExistingImage(index)} className="aspect-square w-full rounded-md bg-cover bg-center" style={{ backgroundImage: `url(${resolveMediaUrl(image.url)}${image.cacheTag ? `${resolveMediaUrl(image.url).includes("?") ? "&" : "?"}v=${image.cacheTag}` : ""})` }} aria-label="Eliminar imagen existente" />
                   <select value={image.color ?? ""} onChange={(event) => setExistingImageColor(index, event.target.value)} className="w-full rounded border border-border bg-background p-1 text-xs">
                     <option value="">Color general</option>
                     {colors.map((color) => <option key={`existing-color-${color}-${index}`} value={color}>{color}</option>)}

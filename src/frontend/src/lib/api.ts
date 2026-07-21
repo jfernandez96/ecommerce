@@ -15,11 +15,11 @@ export const api = axios.create({
 
 function normalizeProducts(data: unknown) {
   if (!data || typeof data !== "object" || !("items" in data) || !Array.isArray(data.items)) {
-    return fallbackProducts;
+    return [] as ProductSummary[];
   }
 
   const items = data.items as ProductSummary[];
-  return items.length > 0 ? items : fallbackProducts;
+  return items;
 }
 
 function getFirstValidationMessage(data: unknown) {
@@ -170,7 +170,24 @@ export type CreateOrderRequest = {
   fulfillmentType: "shipping" | "pickup";
   storeId: string;
   notes?: string;
+  couponCode?: string;
   items: CheckoutItemRequest[];
+};
+
+export type ValidateCouponRequest = {
+  couponCode: string;
+  email: string;
+  subtotal: number;
+  items: CheckoutItemRequest[];
+};
+
+export type ValidateCouponResponse = {
+  isValid: boolean;
+  message: string;
+  discountAmount: number;
+  finalSubtotal: number;
+  promotionName?: string | null;
+  promotionType?: string | null;
 };
 
 export type OrderCheckoutResponse = {
@@ -287,7 +304,7 @@ export async function getProducts(pageSize = 12) {
     const { data } = await api.get("/products", { params: { pageSize, sortBy: "newest" } });
     return normalizeProducts(data);
   } catch {
-    return fallbackProducts;
+    return [] as ProductSummary[];
   }
 }
 
@@ -354,6 +371,11 @@ export async function getBrands() {
 export async function createOrder(payload: CreateOrderRequest) {
   const { data } = await api.post("/orders/checkout", payload);
   return data as OrderCheckoutResponse;
+}
+
+export async function validateCheckoutCoupon(payload: ValidateCouponRequest) {
+  const { data } = await api.post("/orders/checkout/validate-coupon", payload);
+  return data as ValidateCouponResponse;
 }
 
 export async function getPublicStores() {
@@ -442,10 +464,10 @@ export async function getPublicFooterSettings(): Promise<PublicFooterSettings> {
   } catch {
     return {
       companyRuc: "20613512277",
-      companyBusinessName: "Descosale E.I.R.L",
+      companyBusinessName: "J&M E.I.R.L",
       companyAddress: "Direccion pendiente",
-      companyPhone: "+51 937211721",
-      companyEmail: "descoaostv@gmail.com"
+      companyPhone: "+51 939767490",
+      companyEmail: "jfernandez-20@hotmail.com"
     };
   }
 }

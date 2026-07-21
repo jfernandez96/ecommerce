@@ -58,6 +58,7 @@ public interface IOrderRepository
 {
     Task AddAsync(Order order, CancellationToken cancellationToken = default);
     Task<Order?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<CustomerPromotionProfileDto> GetCustomerPromotionProfileAsync(string email, CancellationToken cancellationToken = default);
     Task<PagedResult<OrderAdminListItemDto>> SearchAdminAsync(OrderAdminSearchRequest request, CancellationToken cancellationToken = default);
     Task<OrderAdminDetailDto?> GetAdminDetailAsync(Guid id, CancellationToken cancellationToken = default);
     Task<OrderAdminSummaryDto> GetAdminSummaryAsync(OrderAdminSearchRequest request, CancellationToken cancellationToken = default);
@@ -210,6 +211,8 @@ public sealed record TokenResponse(string AccessToken, string RefreshToken, Date
 public sealed record ProductAdminDto(Guid Id, string Name, string Slug, string Sku, string Code, Guid BrandId, Guid CategoryId, Guid? SubcategoryId, Guid? MainStoreId, decimal RegularPrice, decimal? SalePrice, decimal Cost, int Stock, int MinimumStock, decimal WeightKg, string Material, string Description, string LongDescription, string? VideoUrl, string SeoTitle, string SeoDescription, int Status, IReadOnlyList<ProductImageDto> Images, IReadOnlyList<ProductVariantDto> Variants);
 public sealed record PaymentPreparationResult(string Provider, string Status, string IntegrationMode, string ExternalReference, string? PublicKey, string? ClientSecret, string? CheckoutUrl, string? QrCodeUrl, DateTimeOffset? ExpiresAt, IReadOnlyList<string> Instructions);
 public sealed record PaymentPreparationDto(Guid PaymentId, string Provider, string Status, string IntegrationMode, string ExternalReference, string? PublicKey, string? ClientSecret, string? CheckoutUrl, string? QrCodeUrl, DateTimeOffset? ExpiresAt, IReadOnlyList<string> Instructions);
+public sealed record CustomerPromotionProfileDto(int TotalOrders, int ConfirmedOrders, decimal TotalSpent, DateTimeOffset? LastOrderAt);
+public sealed record CouponValidationResultDto(bool IsValid, string Message, decimal DiscountAmount, decimal FinalSubtotal, string? PromotionName, string? PromotionType);
 public sealed record OrderCheckoutResultDto(Guid OrderId, string OrderNumber, string Status, decimal Total, Guid StoreId, string StoreName, string FulfillmentType, PaymentPreparationDto Payment);
 public sealed record OrderAdminSearchRequest(string? OrderNumber, string? CustomerName, string? PaymentStatus, int? OrderStatus, DateOnly? StartDate, DateOnly? EndDate, int Page = 1, int PageSize = 20);
 public sealed record OrderAdminListItemDto(Guid Id, string Number, Guid StoreId, string StoreName, string FulfillmentType, string CustomerName, string CustomerPhone, string CustomerEmail, int ItemCount, decimal Total, int Status, int PaymentMethod, string PaymentStatus, string PaymentProvider, DateTimeOffset CreatedAt);

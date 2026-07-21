@@ -315,6 +315,47 @@ public sealed class OrderRepository(AppDbContext dbContext) : IOrderRepository
             .Include(order => order.Payments)
             .FirstOrDefaultAsync(order => order.Id == id, cancellationToken);
 
+    public async Task<CustomerPromotionProfileDto> GetCustomerPromotionProfileAsync(string email, CancellationToken cancellationToken = default)
+    {
+        var normalizedEmail = (email ?? string.Empty).Trim().ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(normalizedEmail))
+        {
+            return new CustomerPromotionProfileDto(0, 0, 0m, null);
+        }
+
+        var customerOrders = dbContext.Orders
+            .AsNoTracking()
+            .Where(order => order.CustomerEmail.ToLower() == normalizedEmail && order.Status != OrderStatus.Cancelled);
+
+        var totalOrders = await customerOrders.CountAsync(cancellationToken);
+        if (totalOrders == 0)
+        {
+            return new CustomerPromotionProfileDto(0, 0, 0m, null);
+        }
+
+        var confirmedOrders = await customerOrders
+            .CountAsync(order =>
+                (order.Payments
+                    .OrderByDescending(payment => payment.CreatedAt)
+                    .Select(payment => payment.Status)
+                    .FirstOrDefault() ?? "pending") == "confirmed", cancellationToken);
+
+        var totalSpent = await customerOrders
+            .Where(order =>
+                (order.Payments
+                    .OrderByDescending(payment => payment.CreatedAt)
+                    .Select(payment => payment.Status)
+                    .FirstOrDefault() ?? "pending") == "confirmed")
+            .SumAsync(order => (decimal?)order.Total, cancellationToken) ?? 0m;
+
+        var lastOrderAt = await customerOrders
+            .OrderByDescending(order => order.CreatedAt)
+            .Select(order => (DateTimeOffset?)order.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return new CustomerPromotionProfileDto(totalOrders, confirmedOrders, totalSpent, lastOrderAt);
+    }
+
     public async Task<PagedResult<OrderAdminListItemDto>> SearchAdminAsync(OrderAdminSearchRequest request, CancellationToken cancellationToken = default)
     {
         var page = Math.Max(request.Page, 1);

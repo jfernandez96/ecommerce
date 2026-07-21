@@ -1,4 +1,5 @@
 using Ecommerce.Application.Common;
+using Ecommerce.Application.Promotions;
 using Ecommerce.Domain.Catalog;
 using Ecommerce.Domain.Orders;
 using FluentValidation;
@@ -25,6 +26,7 @@ public sealed record CreateOrderCommand(
     string FulfillmentType,
     Guid StoreId,
     string? Notes,
+    string? CouponCode,
     IReadOnlyList<CheckoutItemInput> Items) : IRequest<OrderCheckoutResultDto>;
 
 public sealed class CreateOrderCommandValidator : AbstractValidator<CreateOrderCommand>
@@ -61,6 +63,7 @@ public sealed class CreateOrderCommandValidator : AbstractValidator<CreateOrderC
         RuleFor(x => x.FulfillmentType).Must(value => value is "shipping" or "pickup")
             .WithMessage("El tipo de entrega debe ser shipping o pickup.");
         RuleFor(x => x.StoreId).NotEmpty();
+        RuleFor(x => x.CouponCode).MaximumLength(80);
         RuleFor(x => x.Items).NotEmpty();
         RuleForEach(x => x.Items).ChildRules(item =>
         {
@@ -87,6 +90,7 @@ public sealed class CreateOrderCommandHandler(
     IOrderRepository orderRepository,
     IProductRepository productRepository,
     IStoreLocationRepository storeLocationRepository,
+    IPromotionRepository promotionRepository,
     IStoreSettingsRepository storeSettingsRepository,
     IPaymentPreparationService paymentPreparationService,
     IOrderNotificationService orderNotificationService,
@@ -163,6 +167,7 @@ public sealed class CreateOrderCommandHandler(
 
         var loadedProducts = new Dictionary<Guid, Product>();
         var touchedProducts = new HashSet<Product>();
+        var promotionLines = new List<PromotionCartLine>(request.Items.Count);
 
         foreach (var item in request.Items)
         {
@@ -226,6 +231,7 @@ public sealed class CreateOrderCommandHandler(
             touchedProducts.Add(product);
 
             var unitPrice = product.EffectivePrice + (variant?.PriceAdjustment ?? 0m);
+            promotionLines.Add(new PromotionCartLine(product.Id, product.CategoryId, product.BrandId, item.Quantity, unitPrice));
             var unitPriceWithoutTax = taxIncludedInPrice
                 ? SafeRound(unitPrice / (1m + (taxRate / 100m)))
                 : SafeRound(unitPrice);
@@ -279,6 +285,28 @@ public sealed class CreateOrderCommandHandler(
 
         order.Subtotal = taxableSubtotal;
         order.Discount = 0;
+
+        if (!string.IsNullOrWhiteSpace(request.CouponCode))
+        {
+            var profile = await orderRepository.GetCustomerPromotionProfileAsync(order.CustomerEmail, cancellationToken);
+            var promotions = await promotionRepository.ListAsync(cancellationToken);
+
+            var evaluation = PromotionRuleEvaluator.EvaluateBest(promotions, new PromotionEvaluationContext(
+                request.CouponCode,
+                grossSubtotal,
+                promotionLines,
+                profile,
+                DateTimeOffset.UtcNow,
+                CouponOnly: true));
+
+            if (!evaluation.IsValid)
+            {
+                throw new ValidationException(evaluation.Message);
+            }
+
+            order.Discount = Math.Min(evaluation.DiscountAmount, grossSubtotal);
+        }
+
         order.Tax = taxTotal;
         order.TaxType = activeTaxType;
         order.TaxRate = taxRate;

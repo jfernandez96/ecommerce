@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Bell, LogOut, Search, Rocket } from "lucide-react";
 import Link from "next/link";
 import { AdminTopMenu } from "@/components/admin/admin-top-menu";
+import { ApiAvailabilityGate } from "@/components/commerce/api-availability-gate";
 import { CartDrawer } from "@/components/commerce/cart-drawer";
 import { SiteFooter } from "@/components/commerce/site-footer";
 import { SiteHeader } from "@/components/commerce/site-header";
@@ -177,7 +178,9 @@ export function AppChrome({ children }: Readonly<{ children: React.ReactNode }>)
       <SiteHeader />
       <CartDrawer />
       <VirtualShopAssistant />
-      {children}
+      <ApiAvailabilityGate>
+        {children}
+      </ApiAvailabilityGate>
       <SiteFooter />
     </div>
   );

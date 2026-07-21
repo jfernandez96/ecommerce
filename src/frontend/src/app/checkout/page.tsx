@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { CreditCard, Loader2, MapPin, ShieldCheck, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import {
   getProvinces,
   getPublicStores,
   getPublicSettings,
+  validateCheckoutCoupon,
   type DepartmentDto,
   type DistrictDto,
   type OrderCheckoutResponse,
@@ -24,8 +25,28 @@ import { useCartStore } from "@/store/cart-store";
 // Lima's CodigoSunat is "15"
 const LIMA_CODE = "15";
 
+function getPromotionBadgeLabel(promotionType?: string | null, promotionName?: string | null) {
+  const upperName = (promotionName ?? "").toUpperCase();
+  const normalizedType = (promotionType ?? "").toUpperCase();
+
+  if (upperName.includes("[COUPON:")) return "COUPON";
+  if (upperName.includes("[RFM:")) return "RFM";
+  if (upperName.includes("[SEGMENT:")) return "SEGMENT";
+  if (upperName.includes("[FIRST_ORDER:")) return "FIRST_ORDER";
+  if (upperName.includes("[BOGO:")) return "BOGO";
+  if (upperName.includes("[BUNDLE:")) return "BUNDLE";
+
+  if (normalizedType === "TWOFORONE") return "BOGO";
+  if (normalizedType === "THREEFORTWO") return "BUNDLE";
+  if (normalizedType === "PERCENTAGE") return "PERCENTAGE";
+  if (normalizedType === "FIXEDAMOUNT") return "FIXED_AMOUNT";
+
+  return normalizedType || null;
+}
+
 export default function CheckoutPage() {
   const { items, clear } = useCartStore();
+  const formRef = useRef<HTMLFormElement | null>(null);
 
   // ── Settings & geo state ─────────────────────────────────────────────────
   const [settings, setSettings] = useState<PublicStoreSettings>({
@@ -52,6 +73,14 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState<"card" | "yape">("card");
   const [documentType, setDocumentType] = useState<"receipt" | "invoice">("receipt");
   const [customerDocumentType, setCustomerDocumentType] = useState<"dni" | "ruc" | "ce" | "passport">("dni");
+  const [customerEmail, setCustomerEmail] = useState("");
+  const [couponCode, setCouponCode] = useState("");
+  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [couponMessage, setCouponMessage] = useState<string | null>(null);
+  const [appliedPromotionType, setAppliedPromotionType] = useState<string | null>(null);
+  const [appliedPromotionName, setAppliedPromotionName] = useState<string | null>(null);
+  const [isCouponValid, setIsCouponValid] = useState(false);
+  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
   const [result, setResult] = useState<OrderCheckoutResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -111,12 +140,95 @@ export default function CheckoutPage() {
   }, [items.length, selectedDeptId, isLima, settings, fulfillmentType]);
 
   const subtotal = useMemo(() => items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0), [items]);
-  const total = subtotal + shipping;
+  const discountedSubtotal = useMemo(() => Math.max(0, subtotal - couponDiscount), [subtotal, couponDiscount]);
+  const total = discountedSubtotal + shipping;
 
   // ── Derived geo labels for order payload ─────────────────────────────────
   const selectedProvince = provinces.find((p) => p.id === selectedProvinceId);
   const selectedDistrict = districts.find((d) => d.id === selectedDistrictId);
   const selectedStore = stores.find((store) => store.id === selectedStoreId) ?? null;
+  const promotionBadgeLabel = useMemo(() => getPromotionBadgeLabel(appliedPromotionType, appliedPromotionName), [appliedPromotionType, appliedPromotionName]);
+
+  async function runCouponValidation(mode: "manual" | "auto") {
+    const normalizedCode = couponCode.trim();
+    const normalizedEmail = customerEmail.trim();
+
+    if (!normalizedCode) {
+      setCouponDiscount(0);
+      setCouponMessage(null);
+      setAppliedPromotionType(null);
+      setAppliedPromotionName(null);
+      setIsCouponValid(false);
+      return;
+    }
+
+    if (!normalizedEmail || !normalizedEmail.includes("@")) {
+      if (mode === "manual") {
+        setCouponMessage("Ingresa tu correo para validar el cupon.");
+      }
+      setCouponDiscount(0);
+      setAppliedPromotionType(null);
+      setAppliedPromotionName(null);
+      setIsCouponValid(false);
+      return;
+    }
+
+    if (items.length === 0 || subtotal <= 0) {
+      if (mode === "manual") {
+        setCouponMessage("Tu carrito esta vacio.");
+      }
+      setCouponDiscount(0);
+      setAppliedPromotionType(null);
+      setAppliedPromotionName(null);
+      setIsCouponValid(false);
+      return;
+    }
+
+    setIsValidatingCoupon(true);
+    try {
+      const validation = await validateCheckoutCoupon({
+        couponCode: normalizedCode,
+        email: normalizedEmail,
+        subtotal,
+        items: items.map((item) => ({
+          productId: item.id,
+          productVariantId: item.selectedVariantId,
+          quantity: item.quantity,
+        })),
+      });
+
+      setIsCouponValid(validation.isValid);
+      setCouponDiscount(validation.isValid ? validation.discountAmount : 0);
+      setCouponMessage(validation.message);
+      setAppliedPromotionType(validation.isValid ? (validation.promotionType ?? null) : null);
+      setAppliedPromotionName(validation.isValid ? (validation.promotionName ?? null) : null);
+    } catch (validationError) {
+      setIsCouponValid(false);
+      setCouponDiscount(0);
+      setCouponMessage(validationError instanceof Error ? validationError.message : "No se pudo validar el cupon.");
+      setAppliedPromotionType(null);
+      setAppliedPromotionName(null);
+    } finally {
+      setIsValidatingCoupon(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!couponCode.trim()) {
+      setCouponDiscount(0);
+      setCouponMessage(null);
+      setAppliedPromotionType(null);
+      setAppliedPromotionName(null);
+      setIsCouponValid(false);
+      return;
+    }
+
+    const timerId = window.setTimeout(() => {
+      void runCouponValidation("auto");
+    }, 500);
+
+    return () => window.clearTimeout(timerId);
+  }, [couponCode, customerEmail, subtotal, items]);
 
   // ── Submit ────────────────────────────────────────────────────────────────
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -173,6 +285,7 @@ export default function CheckoutPage() {
         fulfillmentType,
         storeId: effectiveStoreId,
         notes: String(formData.get("notes") ?? "") || undefined,
+        couponCode: couponCode.trim() || undefined,
         items: items.map((item) => ({
           productId: item.id,
           productVariantId: item.selectedVariantId,
@@ -233,7 +346,7 @@ export default function CheckoutPage() {
             </div>
           </div>
         ) : (
-          <form id="checkout-form" onSubmit={handleSubmit} className="mt-8 space-y-8">
+          <form ref={formRef} id="checkout-form" onSubmit={handleSubmit} className="mt-8 space-y-8">
 
             <div className="rounded-[32px] border border-border bg-background p-6 shadow-sm">
               <h2 className="text-2xl font-black">Entrega y tienda</h2>
@@ -288,7 +401,7 @@ export default function CheckoutPage() {
               <h2 className="text-2xl font-black">Datos de entrega</h2>
               <div className="mt-6 grid gap-4 sm:grid-cols-2">
                 <input name="fullName" className="rounded-2xl border border-border bg-background px-4 py-3" placeholder="Nombre completo" required />
-                <input name="email" type="email" className="rounded-2xl border border-border bg-background px-4 py-3" placeholder="Correo electronico" required />
+                <input name="email" type="email" value={customerEmail} onChange={(event) => setCustomerEmail(event.target.value)} className="rounded-2xl border border-border bg-background px-4 py-3" placeholder="Correo electronico" required />
                 <input name="phone" className="rounded-2xl border border-border bg-background px-4 py-3" placeholder="Telefono" required />
                 <select value={customerDocumentType} onChange={(e) => setCustomerDocumentType(e.target.value as "dni" | "ruc" | "ce" | "passport")} className="rounded-2xl border border-border bg-background px-4 py-3">
                   <option value="dni">DNI</option>
@@ -405,6 +518,37 @@ export default function CheckoutPage() {
                   </p>
                 </div>
               )}
+
+              <div className="mt-5 rounded-2xl border border-border bg-muted/30 p-4">
+                <p className="text-sm font-semibold">Cupon de descuento</p>
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                  <input
+                    value={couponCode}
+                    onChange={(event) => setCouponCode(event.target.value.toUpperCase())}
+                    className="w-full rounded-2xl border border-border bg-background px-4 py-3"
+                    placeholder="Ej: JULIO10"
+                  />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => { void runCouponValidation("manual"); }}
+                    disabled={isValidatingCoupon}
+                  >
+                    {isValidatingCoupon ? <><Loader2 size={16} className="animate-spin" /> Validando...</> : "Validar cupon"}
+                  </Button>
+                </div>
+                {couponMessage && (
+                  <p className={`mt-2 text-xs ${isCouponValid ? "text-emerald-700 dark:text-emerald-300" : "text-amber-700 dark:text-amber-300"}`}>
+                    {couponMessage}
+                  </p>
+                )}
+                {isCouponValid && promotionBadgeLabel && (
+                  <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 text-[11px] font-bold tracking-wide text-emerald-700 dark:border-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+                    <span>Promocion aplicada</span>
+                    <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-white dark:bg-emerald-500">{promotionBadgeLabel}</span>
+                  </div>
+                )}
+              </div>
             </div>
 
             {error && (
@@ -435,6 +579,19 @@ export default function CheckoutPage() {
           <div className="flex items-center justify-between">
             <span className="text-foreground/60">Subtotal</span>
             <strong>{formatCurrency(subtotal)}</strong>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-foreground/60">Descuento estimado</span>
+            <div className="flex items-center gap-2">
+              {couponDiscount > 0 && promotionBadgeLabel && (
+                <span className="rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:border-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+                  {promotionBadgeLabel}
+                </span>
+              )}
+              <strong className={couponDiscount > 0 ? "text-emerald-700 dark:text-emerald-300" : ""}>
+                {couponDiscount > 0 ? `- ${formatCurrency(couponDiscount)}` : formatCurrency(0)}
+              </strong>
+            </div>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-foreground/60">
